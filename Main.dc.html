@@ -195,6 +195,24 @@ body{margin:0}
 .kb[data-theme="paper"] .kb-card:nth-child(3n+1){transform:rotate(calc(var(--tilt) * -1deg))}
 .kb[data-theme="paper"] .kb-card:nth-child(3n+2){transform:rotate(calc(var(--tilt) * .6deg))}
 .kb[data-theme="paper"] .kb-card:nth-child(3n){transform:rotate(calc(var(--tilt) * 1deg))}
+.kb-src{font-family:var(--mono);font-size:11px;padding:3px 8px;border:1px dashed var(--line);border-radius:var(--radius);color:var(--muted);white-space:nowrap;cursor:help}
+.kb-btn-primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.kb-btn:disabled{opacity:.5;cursor:not-allowed}
+.kb-modal-back{position:absolute;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.45)}
+.kb-modal{width:min(520px,100%);max-height:calc(100% - 32px);overflow:auto;display:flex;flex-direction:column;gap:14px;padding:16px;border-radius:calc(var(--radius) + 4px);background:var(--panel);color:var(--panel-fg);border:1px solid var(--line);box-shadow:0 20px 50px rgba(0,0,0,.3)}
+.kb-modal-head{display:flex;align-items:center;gap:8px}
+.kb-modal-head h2{margin:0;flex:1;font-size:15px;font-weight:600}
+.kb-drop{position:relative;display:flex;flex-direction:column;align-items:center;gap:8px;padding:28px 16px;border:2px dashed var(--line);border-radius:var(--radius);cursor:pointer;text-align:center;color:var(--panel-muted)}
+.kb-drop:hover,.kb-drop-on{border-color:var(--accent);color:var(--panel-fg)}
+.kb-hidden-input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.kb-open-url{display:flex;flex-direction:column;gap:6px}
+.kb-open-url .kb-row{flex-wrap:nowrap}
+.kb-input{flex:1;min-width:0;height:36px;padding:0 10px;border:1px solid var(--line);border-radius:var(--radius);background:var(--control);font-family:var(--mono);font-size:12px}
+.kb-small{font-size:12px;line-height:1.45}
+.kb-recents{display:flex;flex-direction:column;gap:4px}
+.kb-recent{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:8px 10px;border:1px solid transparent;border-radius:var(--radius);background:transparent;cursor:pointer;text-align:left}
+.kb-recent:hover{border-color:var(--line);background:var(--control)}
+.kb-recent small{color:var(--panel-muted);font-family:var(--mono);font-size:11px;word-break:break-all}
 @media (max-width: 900px){
   .kb-mode-split{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) minmax(0,1fr)}
   .kb-mode-split .kb-source{border-left:0;border-top:1px solid var(--line)}
@@ -209,6 +227,7 @@ body{margin:0}
   <header class="kb-top" data-obstacle="toolbar">
     <div class="kb-row">
       <input class="kb-title" aria-label="Board title" value="{{titleValue}}" onChange="{{onTitle}}" onBlur="{{onTitleBlur}}">
+      <sc-if value="{{fromSrc}}" hint-placeholder-val="{{ false }}"><span class="kb-src" title="{{srcTitle}}">{{srcName}} · not saved here</span></sc-if>
       <div class="kb-search">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
         <input type="search" placeholder="Search title, description, owner, tags" aria-label="Search tasks" value="{{query}}" onChange="{{onQuery}}">
@@ -227,6 +246,9 @@ body{margin:0}
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 3a9 9 0 0 0 0 18c1.5 0 2-1 2-2s-1-1.5-1-2.5 1-1.5 2-1.5h2a4 4 0 0 0 4-4c0-4.4-4-8-9-8z"></path><circle cx="7.5" cy="11" r="1"></circle><circle cx="10" cy="7" r="1"></circle><circle cx="15" cy="7" r="1"></circle></svg>
         <span>{{themeName}}</span>
       </button>
+      <button class="kb-btn" onClick="{{showOpen}}" title="Open a board from a file or URL"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg><span>Open</span></button>
+      <button class="kb-btn" onClick="{{save}}" title="Save to a file (Ctrl/⌘ S)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3h11l3 3v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"></path><path d="M7 3v5h8V3M7 21v-7h10v7"></path></svg><span>Save</span></button>
+      <button class="kb-btn" onClick="{{download}}" title="Download {{fileName}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m-4-4 4 4 4-4M4 19h16"></path></svg><span>Download</span></button>
     </div>
     <sc-if value="{{filterOpen}}" hint-placeholder-val="{{ false }}">
       <div class="kb-filters">
@@ -520,6 +542,39 @@ body{margin:0}
   </sc-if>
 
   <canvas class="kb-burst" data-kb-burst="{{uid}}" aria-hidden="true"></canvas>
+
+  <sc-if value="{{openOpen}}" hint-placeholder-val="{{ false }}">
+    <div class="kb-modal-back" onClick="{{openBackdrop}}" onKeyDown="{{openKey}}">
+      <div class="kb-modal" role="dialog" aria-modal="true" aria-labelledby="kb-open-h">
+        <div class="kb-modal-head">
+          <h2 id="kb-open-h">Open a board</h2>
+          <button class="kb-icon" aria-label="Close" onClick="{{hideOpen}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+        </div>
+        <label class="{{dropClass}}" onDragOver="{{openDragOver}}" onDragLeave="{{openDragLeave}}" onDrop="{{openDrop}}">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4m-4 4 4-4 4 4M4 17v3h16v-3"></path></svg>
+          <span>Drop a .md file here, or <u>choose a file</u></span>
+          <input type="file" accept=".md,.markdown,.txt,text/markdown,text/plain" onChange="{{onMdFile}}" class="kb-hidden-input">
+        </label>
+        <form class="kb-open-url" onSubmit="{{openUrlSubmit}}">
+          <label for="kb-open-url" class="kb-flabel">Or open from a URL</label>
+          <div class="kb-row">
+            <input id="kb-open-url" class="kb-input" type="url" placeholder="https://…/board.md" value="{{openUrl}}" onChange="{{onOpenUrl}}">
+            <button class="kb-btn kb-btn-primary" type="submit" disabled="{{openUrlDisabled}}">{{openUrlLabel}}</button>
+          </div>
+          <span class="kb-muted kb-small">GitHub file links work. A URL is shown with ?src= so the address can be shared, and isn't saved in this browser. A file replaces the board saved here.</span>
+        </form>
+        <sc-if value="{{hasRecents}}" hint-placeholder-val="{{ false }}">
+          <div class="kb-recents">
+            <span class="kb-flabel">Recent</span>
+            <sc-for list="{{recents}}" as="r" hint-placeholder-count="3">
+              <button class="kb-recent" onClick="{{r.open}}"><strong>{{r.name}}</strong><small>{{r.detail}}</small></button>
+            </sc-for>
+          </div>
+        </sc-if>
+        <sc-if value="{{openError}}" hint-placeholder-val="{{ false }}"><div class="kb-error" role="alert">{{openError}}</div></sc-if>
+      </div>
+    </div>
+  </sc-if>
 
   <sc-if value="{{opError}}" hint-placeholder-val="{{ false }}">
     <div class="kb-toast" role="alert">
@@ -2500,6 +2555,11 @@ function migrateV1(md) {
 const STORAGE_THEME_LEGACY = 'kb-theme:v1';
 const STORAGE_EFFECTS_LEGACY = 'kb-effects:v1';
 const MODES = [{ id: 'board', label: 'Board' }, { id: 'split', label: 'Split' }, { id: 'archive', label: 'Archive' }, { id: 'source', label: 'Markdown' }];
+/** How each mode is spelled in ?view=. */
+const VIEW_PARAM = { board: 'board', split: 'split', archive: 'archive', source: 'markdown' };
+/** Files and URLs opened from the Open dialog, newest first: { name, url } or { name, md } (a file's text, since its handle can't be stored). */
+const STORAGE_RECENTS = 'kb-recents:v1';
+const MAX_RECENTS = 8;
 
 /* ---------- (6) Component: the IO edge ---------- */
 
@@ -2509,21 +2569,26 @@ class Component extends DCLogic {
     this.uid = `kb${Math.floor(Math.random() * 1e9).toString(36)}`;
     this.fxSeed = 1337;
     const loaded = Component.loadInitial(props);
+    // The address bar is the source of the file (?src=) and the selections; see fromQuery.
+    const p = Component.fromQuery(location.search);
+    this.src = p.src;
+    this.fileHandle = null;
+    this.pageKey = `${p.mode}|${p.task}`;
     this.state = {
       board: loaded.board,
-      saveStatus: loaded.saveStatus,
+      saveStatus: p.src === null ? loaded.saveStatus : `Loading ${p.src}…`,
       storageWarning: loaded.storageWarning,
       fresh: null,
       restoreTargets: {},
-      mode: 'board',
+      mode: p.mode,
       sourceDraft: null,
       parseError: null,
-      query: '',
+      query: p.query,
       filterOpen: false,
-      tagFilter: [],
-      ownerFilter: [],
+      tagFilter: p.tags,
+      ownerFilter: p.owners,
       pickerOpen: false,
-      editingTaskId: null,
+      editingTaskId: p.task,
       drafts: {},
       fieldErrors: {},
       tagInput: '',
@@ -2534,8 +2599,51 @@ class Component extends DCLogic {
       opError: null,
       effectError: null,
       copyLabel: 'Copy',
+      themeOverride: p.theme,
+      recents: Component.loadRecents(),
+      openOpen: false, openUrl: p.src ?? '', openBusy: false, openError: null, openDragging: false,
     };
   }
+
+  static KEYS = { board: STORAGE_BOARD, recents: STORAGE_RECENTS };
+
+  /**
+   * ?src=<url>  the markdown to show (absolute, or relative to the page; GitHub file links work). Not autosaved.
+   * ?view=board|split|archive|markdown  ?q=<search>  ?tags=a,b  ?owners=a,b  ?task=<id> (open in the editor)
+   * ?theme=<id>  shows the board in that style without changing the file. Unknown values are ignored.
+   */
+  static fromQuery(search) {
+    const q = new URLSearchParams(search);
+    const list = (k) => (q.get(k) ?? '').split(',').map((x) => x.trim()).filter((x) => x !== '');
+    const mode = MODES.find((m) => VIEW_PARAM[m.id] === q.get('view'));
+    const theme = q.get('theme');
+    return {
+      src: q.get('src'), mode: mode === undefined ? 'board' : mode.id, query: q.get('q') ?? '',
+      tags: list('tags'), owners: list('owners'), task: q.get('task'), theme: THEMES.some((t) => t.id === theme) ? theme : null,
+    };
+  }
+  /** The query string for a state, keeping unrelated params. */
+  static toQuery(s, src, search) {
+    const q = new URLSearchParams(search);
+    for (const k of ['src', 'view', 'q', 'tags', 'owners', 'task', 'theme']) q.delete(k);
+    const owners = s.ownerFilter.filter((o) => o !== '');
+    if (src !== null) q.set('src', src);
+    if (s.mode !== 'board') q.set('view', VIEW_PARAM[s.mode]);
+    if (s.query !== '') q.set('q', s.query);
+    if (s.tagFilter.length > 0) q.set('tags', s.tagFilter.join(','));
+    if (owners.length > 0) q.set('owners', owners.join(','));
+    if (s.editingTaskId !== null) q.set('task', s.editingTaskId);
+    if (s.themeOverride !== null) q.set('theme', s.themeOverride);
+    const out = q.toString().replace(/%2F/gi, '/').replace(/%3A/gi, ':').replace(/%2C/gi, ',');
+    return out === '' ? '' : `?${out}`;
+  }
+  static loadRecents() {
+    try {
+      const v = JSON.parse(window.localStorage.getItem(STORAGE_RECENTS) ?? '[]');
+      return Array.isArray(v) ? v.filter((r) => typeof r.name === 'string' && (typeof r.url === 'string' || typeof r.md === 'string')) : [];
+    } catch (err) { return []; } // unreadable or blocked storage: start with no recents
+  }
+  shownTheme() { return themeById(this.state.themeOverride ?? this.state.board.settings.theme); }
 
   static loadInitial(props) {
     let board = parseBoard(SEED_MD);
@@ -2607,8 +2715,36 @@ class Component extends DCLogic {
       this.raf = window.requestAnimationFrame(loop);
     };
     this.raf = window.requestAnimationFrame(loop);
+    this.onPop = () => {
+      const p = Component.fromQuery(location.search);
+      if (p.src !== this.src) { window.location.reload(); return; }
+      this.pageKey = `${p.mode}|${p.task}`;
+      this.setState({ mode: p.mode, query: p.query, tagFilter: p.tags, ownerFilter: p.owners, editingTaskId: p.task, themeOverride: p.theme });
+    };
+    this.onKey = (e) => { if ((e.metaKey || e.ctrlKey) && !e.altKey && e.key.toLowerCase() === 's') { e.preventDefault(); this.save(); } };
+    window.addEventListener('popstate', this.onPop);
+    window.addEventListener('keydown', this.onKey);
+    if (this.src !== null) {
+      const src = this.src;
+      this.openUrl(src).catch((err) => {
+        this.src = null;
+        this.setState({ openOpen: true, openError: `Can't load ${src}: ${err.message}`, saveStatus: this.persistBoard(this.state.board) });
+      });
+    }
+  }
+  /** Keep the address bar in step: a new view or task is a history entry, anything else replaces it. */
+  componentDidUpdate() {
+    const next = Component.toQuery(this.state, this.src, location.search);
+    const key = `${this.state.mode}|${this.state.editingTaskId}`;
+    const isNewPage = key !== this.pageKey;
+    this.pageKey = key;
+    if (next === location.search) return;
+    const url = location.pathname + next + location.hash;
+    if (isNewPage) history.pushState(null, '', url); else history.replaceState(null, '', url);
   }
   componentWillUnmount() {
+    window.removeEventListener('popstate', this.onPop);
+    window.removeEventListener('keydown', this.onKey);
     this.alive = false;
     window.cancelAnimationFrame(this.raf);
     window.clearInterval(this.clock);
@@ -2641,7 +2777,7 @@ class Component extends DCLogic {
       this.bursts = [];
       this.setState({ opError: `Effect stopped: ${err.message}` });
     }
-    const theme = themeById(this.state.board.settings.theme);
+    const theme = this.shownTheme();
     if (theme.effect === null) {
       if (this.fx !== null) { this.fx.dispose(); this.fx = null; }
       return;
@@ -2740,6 +2876,7 @@ class Component extends DCLogic {
   /* ---- commits ---- */
   nowIso() { return new Date().toISOString(); }
   persistBoard(board) {
+    if (this.src !== null) return `Not saved in this browser: opened from ${this.src}. Save or Download to keep changes.`;
     try {
       window.localStorage.setItem(STORAGE_BOARD, serializeBoard(board));
       return 'Saved in this browser';
@@ -2768,6 +2905,71 @@ class Component extends DCLogic {
       this.setState({ board, drafts, fieldErrors, sourceDraft: null, parseError: null, saveStatus: this.persistBoard(board) }, after);
     } catch (err) {
       this.setState({ drafts, fieldErrors: { ...this.state.fieldErrors, [key]: err.message.replace(/^board(\.[\w[\]]+)*: /, '') } }, after);
+    }
+  }
+
+  /* ---- open, save, download ---- */
+  openFile(file) {
+    if (file === undefined) { this.setState({ openError: 'Drop or choose a .md file.' }); return; }
+    if (!/\.(md|markdown|txt)$/i.test(file.name)) { this.setState({ openError: `"${file.name}" is not a markdown file (.md).` }); return; }
+    file.text().then((text) => this.adopt(text, { name: file.name, md: text }, null))
+      .catch((err) => this.setState({ openError: `Can't open ${file.name}: ${err.message}` }));
+  }
+  /** Fetches and shows a board (absolute, or relative to the page; GitHub "blob" links are fetched raw). Other hosts must allow CORS. */
+  async openUrl(raw) {
+    const url = new URL(raw.trim(), location.href).href.replace(/^https:\/\/github\.com\/([^/]+)\/([^/]+)\/blob\//, 'https://raw.githubusercontent.com/$1/$2/');
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const text = await res.text();
+    if (/^\s*<(!doctype|html)/i.test(text)) throw new Error('that is a web page, not a markdown file');
+    this.adopt(text, { name: url.split('/').pop() || url, url: raw.trim() }, raw.trim());
+  }
+  submitOpenUrl() {
+    const raw = this.state.openUrl.trim();
+    if (raw === '' || this.state.openBusy) return;
+    this.setState({ openBusy: true, openError: null });
+    this.openUrl(raw).then(() => this.setState({ openBusy: false }), (err) => this.setState({ openBusy: false, openError: `Can't open ${raw}: ${err.message}` }));
+  }
+  openRecent(r) {
+    if (r.url === undefined) { try { this.adopt(r.md, r, null); } catch (err) { this.setState({ openError: `Can't open ${r.name}: ${err.message}` }); } return; }
+    this.setState({ openUrl: r.url });
+    this.openUrl(r.url).catch((err) => this.setState({ openOpen: true, openError: `Can't open ${r.url}: ${err.message}` }));
+  }
+  /** Shows an opened board. A URL (src) is shown via ?src= and not autosaved; a file (src null) replaces the board saved in this browser. Throws if it doesn't parse. */
+  adopt(text, recent, src) {
+    const board = parseBoard(text);
+    this.src = src;
+    this.fileHandle = null;
+    const same = (r) => (recent.url !== undefined ? r.url === recent.url : r.url === undefined && r.name === recent.name);
+    const recents = [recent, ...this.state.recents.filter((r) => !same(r))].slice(0, MAX_RECENTS);
+    try { window.localStorage.setItem(STORAGE_RECENTS, JSON.stringify(recents)); } catch (err) { /* blocked storage: recents last this session only */ }
+    this.setState({ board, recents, saveStatus: this.persistBoard(board), sourceDraft: null, parseError: null, drag: null, now: Date.now(), openOpen: false, openError: null, openDragging: false });
+  }
+  fileName() { return (this.state.board.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'board') + '.md'; }
+  download() {
+    const name = this.fileName();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([serializeBoard(this.state.board)], { type: 'text/markdown;charset=utf-8' }));
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.setTimeout(() => URL.revokeObjectURL(a.href), 0);
+    return name;
+  }
+  /** Writes the board to a file picked once, then the same file on each save (Chrome, Edge). Elsewhere, downloads it. */
+  async save() {
+    if (typeof window.showSaveFilePicker !== 'function') { this.setState({ saveStatus: `Downloaded ${this.download()}` }); return; }
+    try {
+      if (this.fileHandle === null) {
+        this.fileHandle = await window.showSaveFilePicker({ suggestedName: this.fileName(), types: [{ description: 'Markdown', accept: { 'text/markdown': ['.md'] } }] });
+      }
+      const w = await this.fileHandle.createWritable();
+      await w.write(serializeBoard(this.state.board));
+      await w.close();
+      this.setState({ saveStatus: `Saved to ${this.fileHandle.name}` });
+    } catch (err) {
+      if (err.name !== 'AbortError') this.setState({ opError: `Couldn't save: ${err.message}` });
     }
   }
 
@@ -2865,7 +3067,7 @@ class Component extends DCLogic {
   /* ---- render ---- */
   renderVals() {
     const s = this.state;
-    const theme = themeById(s.board.settings.theme);
+    const theme = this.shownTheme();
     const settings = s.board.settings.themes[theme.id];
     const board = s.board;
     const filter = { query: s.query, tags: s.tagFilter, owners: s.ownerFilter };
@@ -3150,7 +3352,7 @@ class Component extends DCLogic {
         swatch: t.swatch(board.settings.themes[t.id]).map((c) => ({ style: `background: ${c}` })),
         pick: () => {
           this.fxFailedFor = null;
-          this.commit((b) => setTheme(b, t.id), { effectError: null });
+          this.commit((b) => setTheme(b, t.id), { effectError: null, themeOverride: null });
         },
       })),
       settingControls: controls,
@@ -3198,6 +3400,31 @@ class Component extends DCLogic {
 
       opError: s.opError,
       dismissError: () => this.setState({ opError: null }),
+
+      fromSrc: this.src !== null,
+      srcName: this.src === null ? '' : this.src.split('/').pop(),
+      srcTitle: this.src === null ? '' : `Opened from ${this.src}. Changes aren't saved in this browser: use Save or Download.`,
+      save: () => this.save(),
+      download: () => this.download(),
+      fileName: this.fileName(),
+      openOpen: s.openOpen,
+      showOpen: () => this.setState({ openOpen: true, openError: null, pickerOpen: false }),
+      hideOpen: () => this.setState({ openOpen: false }),
+      openBackdrop: (e) => { if (e.target === e.currentTarget) this.setState({ openOpen: false }); },
+      openKey: (e) => { if (e.key === 'Escape') this.setState({ openOpen: false }); },
+      openDragOver: (e) => { e.preventDefault(); if (!s.openDragging) this.setState({ openDragging: true }); },
+      openDragLeave: () => this.setState({ openDragging: false }),
+      openDrop: (e) => { e.preventDefault(); this.setState({ openDragging: false }); this.openFile(e.dataTransfer.files[0]); },
+      dropClass: s.openDragging ? 'kb-drop kb-drop-on' : 'kb-drop',
+      onMdFile: (e) => { const f = e.target.files[0]; e.target.value = ''; this.openFile(f); },
+      openUrl: s.openUrl,
+      onOpenUrl: (e) => this.setState({ openUrl: e.target.value }),
+      openUrlSubmit: (e) => { e.preventDefault(); this.submitOpenUrl(); },
+      openUrlDisabled: s.openUrl.trim() === '' || s.openBusy,
+      openUrlLabel: s.openBusy ? 'Opening…' : 'Open',
+      openError: s.openError,
+      hasRecents: s.recents.length > 0,
+      recents: s.recents.map((r) => ({ name: r.name, detail: r.url ?? 'File, kept in this browser', open: () => this.openRecent(r) })),
     };
   }
 }

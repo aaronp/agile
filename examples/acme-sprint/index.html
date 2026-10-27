@@ -1,0 +1,11 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Acme sprint board</title>
+<script>
+  // The board app lives in its own repo; this repo only holds the data.
+  // Extra query params are passed through, e.g. ?theme=paper&view=split.
+  const VIEWER = 'https://aaronp.github.io/agile/';
+  const src = new URL('board.md', location.href).href;
+  location.replace(VIEWER + '?src=' + encodeURIComponent(src) + location.search.replace(/^\?/, '&') + location.hash);
+</script>
+<a href="board.md">board.md</a>

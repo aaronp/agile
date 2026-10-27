@@ -1,21 +1,69 @@
-# Board — design reference
+# Agile board
 
-This is a design mockup created in a visual design tool, exported as a
-standalone page. Treat it as a REFERENCE MOCKUP, not production code:
-the markup and inline styles carry the design's precise values — colors,
-font sizes, spacing, radii, shadows, layout — which an implementation
-should replicate faithfully in its own components and styling system
-rather than copy wholesale.
+**[▶ Open the board](https://aaronp.github.io/agile/)** ·
+[Acme example](https://aaronp.github.io/agile/?src=examples/acme-sprint/board.md)
 
-## Contents
+A kanban board driven by **one markdown file**: columns, tasks, their owners, tags, history and the board's
+style. This repo is the app. Your board can live in its own repo and be loaded with `?src=` (see
+[Publishing your own board](#publishing-your-own-board)).
 
-- `Main.dc.html` — the artboard (a Design Component: an `<x-dc>`
-  template + a small logic class). The values to replicate live in its
-  inline `style="…"` attributes and the `<helmet><style>` block.
-- `support.js`, `vendor/react*.js` — the runtime that renders the
-  component in a browser; not part of the design.
+- **Board**, **Split** (board beside its markdown), **Archive** and **Markdown** views.
+- **Open**: drop a `.md` file, choose one, open one from a URL (GitHub file links work) or pick a recent one.
+- **Save** writes the board to a file you pick once, then to the same file each time (Ctrl/⌘ S). Browsers
+  without a file picker (Firefox, Safari) download it instead. **Download** always downloads `<title>.md`.
+- Five styles (Minimal, Paper, Terminal, Ocean, Ball pit), with their settings stored in the file.
 
-## Viewing
+Edits are saved in this browser (localStorage), except for a board opened from a URL. **The `.md` file is the
+real copy**, so keep it in git.
 
-Serve the folder (e.g. `python3 -m http.server`) and open `Main.dc.html`;
-some browsers block the scripts over file://.
+| Query | Shows |
+| --- | --- |
+| _(none)_ | The board saved in this browser, or the sample |
+| `?src=<url>` | That markdown file (absolute, or relative to the page). It isn't saved in the browser, so it never overwrites your board. |
+| `?view=` | `board` (default), `split`, `archive` or `markdown` |
+| `?q=` `?tags=a,b` `?owners=a,b` | Search text and filters |
+| `?task=<id>` | Opens that task, e.g. `?task=t-07` |
+| `?theme=` | `minimal`, `paper`, `terminal`, `ocean` or `ballpit`, without changing the file. Picking a style saves it in the file. |
+
+The address bar follows the app, so any view can be bookmarked or shared. Files on another host must allow
+CORS (GitHub Pages and raw.githubusercontent.com both do).
+
+## Viewing locally
+
+```sh
+make dev     # serves with Bun on http://localhost:8000/ and prints the example's URL
+```
+
+## Hosting
+
+`.github/workflows/pages.yml` runs the tests on pushes to `main` or `master`, then publishes the app as
+`index.html` with `examples/` beside it. Set Settings → Pages → Source: **GitHub Actions**; the
+`github-pages` environment must allow your branch. `.md` files are served raw, without Jekyll.
+
+## Publishing your own board
+
+Your board lives in its own data-only repo (`board.md`, a redirecting `index.html` and a Pages workflow),
+and this repo stays the app. Create an empty repo on GitHub, then:
+
+```sh
+git clone https://github.com/aaronp/agile.git
+cd agile/examples/acme-sprint
+make clone REPO=you/your-board    # or ./clone.sh to be prompted
+```
+
+This copies the example to `../your-board` as a fresh repo on `main`, points its README link at
+`https://you.github.io/your-board/` and sets the `origin` remote. Edit `board.md`, commit and
+`git push -u origin main`, then set Settings → Pages → Source: **GitHub Actions**.
+
+## Development
+
+```sh
+make test    # bun test: the format, the address bar, opening, recents, saving and downloading
+```
+
+| Path | What |
+| --- | --- |
+| `Main.dc.html` | The app: an `<x-dc>` template plus its logic (schema, markdown parser and serializer, board operations, themes, effects) |
+| `support.js`, `vendor/` | The runtime that renders the template in a browser |
+| `examples/acme-sprint/` | A cloneable data-only repo that points back at this app |
+| `app.test.ts` | Runs the logic with the browser stubbed out |
