@@ -1,0 +1,3206 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Markdown agile board</title>
+<script src="./vendor/react.js"></script>
+<script src="./vendor/react-dom.js"></script>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500&amp;family=JetBrains+Mono:wght@400;600&amp;family=Newsreader:opsz,wght@6..72,400;6..72,600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+*{box-sizing:border-box}
+.kb{position:relative;height:100vh;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);color:var(--fg);font-family:var(--font);font-size:14px;line-height:1.4}
+.kb button,.kb input,.kb textarea,.kb select{font:inherit;color:inherit}
+.kb :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.kb-fx{position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;display:block}
+.kb-fx-off{display:none}
+.kb-scan{position:absolute;inset:0;z-index:40;pointer-events:none;background:repeating-linear-gradient(to bottom,transparent 0,transparent 2px,rgba(0,0,0,.28) 2px,rgba(0,0,0,.28) 3px)}
+.kb-dragging,.kb-dragging *{user-select:none;cursor:grabbing}
+.kb-top{position:relative;z-index:5;display:flex;flex-direction:column;gap:10px;padding:14px 20px;background:var(--header-bg);border-bottom:1px solid var(--line);backdrop-filter:var(--header-blur)}
+.kb-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.kb-title{flex:0 1 260px;min-width:120px;border:1px solid transparent;background:transparent;font-family:var(--font-title);font-size:20px;font-weight:600;padding:4px 6px;border-radius:var(--radius);text-shadow:var(--glow)}
+.kb-title:hover{border-color:var(--line)}
+.kb-search{flex:1 1 260px;display:flex;align-items:center;gap:8px;min-width:180px;height:36px;padding:0 10px;border:1px solid var(--line);border-radius:var(--radius);background:var(--control)}
+.kb-search input{flex:1;min-width:0;border:0;background:transparent;outline:none;height:100%}
+.kb-search:focus-within{border-color:var(--accent)}
+.kb-search svg{color:var(--muted);flex:none}
+.kb-btn{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 12px;border:1px solid var(--line);border-radius:var(--radius);background:var(--control);cursor:pointer;white-space:nowrap}
+.kb-btn:hover{border-color:var(--muted)}
+.kb-btn[aria-expanded="true"]{border-color:var(--accent);color:var(--accent)}
+.kb-count{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--accent);color:var(--accent-fg);font-size:11px;font-weight:600}
+.kb-seg{display:inline-flex;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;background:var(--control)}
+.kb-seg-btn{height:34px;padding:0 12px;border:0;background:transparent;cursor:pointer}
+.kb-seg-btn+.kb-seg-btn{border-left:1px solid var(--line)}
+.kb-seg-btn[aria-pressed="true"]{background:var(--accent);color:var(--accent-fg)}
+.kb-filters{display:flex;flex-wrap:wrap;align-items:flex-start;gap:16px 28px;padding-top:4px}
+.kb-fgroup{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.kb-flabel{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.kb-pills{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.kb-pill{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:11px;font-size:12px;font-weight:500;white-space:nowrap;border:1px solid transparent}
+.kb-toggle{cursor:pointer;height:28px;padding:0 10px;border-radius:14px;opacity:.75}
+.kb-toggle[aria-pressed="true"]{opacity:1;box-shadow:0 0 0 2px var(--accent)}
+.kb-owner-toggle{background:var(--control);border:1px solid var(--line)}
+.kb-link{border:0;background:none;color:var(--accent);cursor:pointer;padding:6px 0;text-decoration:underline;text-underline-offset:3px}
+.kb-muted{color:var(--muted)}
+.kb-banner{position:relative;z-index:6;margin:10px 20px 0;padding:10px 14px;border-radius:var(--radius);background:var(--danger-bg);color:var(--danger-fg);display:flex;align-items:center;gap:12px;justify-content:space-between}
+.kb-main{position:relative;z-index:1;flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr)}
+.kb-mode-split{grid-template-columns:minmax(0,1fr) minmax(320px,38%)}
+.kb-board{display:flex;align-items:flex-start;gap:var(--col-gap);padding:18px 20px 40px;overflow:auto;min-height:0}
+.kb-locked{opacity:.45;pointer-events:none;filter:grayscale(.4)}
+.kb-col{flex:none;width:var(--col-w);display:flex;flex-direction:column;gap:var(--gap);padding:var(--col-pad);border-radius:var(--radius);background:var(--surface);border:var(--col-border)}
+.kb-col-head{display:flex;align-items:center;gap:4px;min-height:36px;color:var(--col-head-fg);text-shadow:var(--col-head-shadow)}
+.kb-col-name{flex:1;min-width:0;border:1px solid transparent;background:transparent;font-weight:600;font-family:var(--font-title);font-size:15px;padding:4px 6px;border-radius:var(--radius);text-shadow:var(--glow)}
+.kb-col-name:hover{border-color:var(--line)}
+.kb-col-name:focus{background:var(--control)}
+.kb-col-count{font-size:12px;color:inherit;opacity:.75;font-family:var(--mono);padding:0 4px}
+.kb-icon{display:inline-grid;place-items:center;width:30px;height:30px;border:0;border-radius:var(--radius);background:transparent;cursor:pointer;color:inherit;opacity:.7;flex:none}
+.kb-icon:hover:not(:disabled){opacity:1;background:var(--control)}
+.kb-icon:disabled{opacity:.25;cursor:not-allowed}
+.kb-grip{cursor:grab;touch-action:none}
+.kb-cards{display:flex;flex-direction:column;gap:var(--gap);min-height:24px}
+.kb-card{position:relative;display:flex;flex-direction:column;gap:6px;padding:var(--pad);border-radius:var(--radius);background:var(--card);color:var(--card-fg);border:1px solid var(--card-border);box-shadow:var(--card-shadow);backdrop-filter:var(--card-blur);cursor:grab;touch-action:none;user-select:none;transition:box-shadow .15s}
+.kb-card:hover{box-shadow:var(--card-shadow-hover)}
+.kb-card-title{all:unset;cursor:pointer;font-weight:600;font-family:var(--font-title);font-size:var(--card-title-size);line-height:1.3;text-shadow:var(--glow);overflow-wrap:anywhere}
+.kb-card-title:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:2px}
+.kb-card-desc{color:var(--card-muted);font-size:13px;max-height:8.6em;overflow:hidden}
+.kb-card-desc.kb-desc-long{-webkit-mask-image:linear-gradient(to bottom,#000 65%,transparent);mask-image:linear-gradient(to bottom,#000 65%,transparent)}
+.md{display:flex;flex-direction:column;gap:6px;min-width:0;overflow-wrap:anywhere}
+.md-p,.md-h,.md-q{margin:0;white-space:pre-line}
+.md-h{font-weight:600;color:var(--card-fg)}
+.kb-preview .md-h{color:inherit;font-size:1.05em}
+.md-q{padding-left:10px;border-left:2px solid var(--line);font-style:italic}
+.md-b{font-weight:600}
+.md-i{font-style:italic}
+.md-s{text-decoration:line-through}
+.md-code{font-family:var(--mono);font-size:.88em;padding:.05em .35em;border-radius:4px;background:var(--code-bg)}
+.md-a{color:var(--accent);text-decoration:underline;text-underline-offset:2px}
+.kb-card .md-a{color:inherit}
+.md-pre{margin:0;padding:8px 10px;border-radius:var(--radius);background:var(--code-bg);font-family:var(--mono);font-size:12px;line-height:1.5;overflow:auto;white-space:pre}
+.md-hr{width:100%;border:0;border-top:1px solid var(--line);margin:2px 0}
+.md-list{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:3px}
+.md-li{display:flex;align-items:flex-start;gap:7px}
+.md-marker{flex:none;min-width:1em;text-align:right;opacity:.75;font-variant-numeric:tabular-nums}
+.md-li input[type=checkbox]{flex:none;width:14px;height:14px;margin:2px 0 0;accent-color:var(--accent);cursor:pointer}
+.md-li-body{min-width:0;white-space:pre-line}
+.md-done{text-decoration:line-through;opacity:.65}
+.kb-desc-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.kb-desc-head>span{font-size:12px;color:var(--panel-muted);font-weight:500}
+.kb-tabs{display:inline-flex;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+.kb-tab{height:28px;padding:0 10px;border:0;background:transparent;cursor:pointer;font-size:12px}
+.kb-tab+.kb-tab{border-left:1px solid var(--line)}
+.kb-tab[aria-pressed="true"]{background:var(--accent);color:var(--accent-fg)}
+.kb-md-editor{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:var(--radius);background:var(--control);overflow:hidden}
+.kb-md-editor:focus-within{border-color:var(--accent)}
+.kb-fmtbar{display:flex;flex-wrap:wrap;gap:2px;padding:4px;border-bottom:1px solid var(--line)}
+.kb-fmt{display:inline-grid;place-items:center;width:32px;height:32px;border:0;border-radius:calc(var(--radius) - 2px);background:transparent;cursor:pointer;color:inherit;opacity:.75}
+.kb-fmt:hover{opacity:1;background:var(--code-bg)}
+.kb-fmt-sep{margin-right:8px}
+.kb-md-editor textarea{border:0;border-radius:0;background:transparent;min-height:170px;font-family:var(--mono);font-size:12.5px;line-height:1.6;padding:10px 12px;resize:vertical;width:100%;outline:none}
+.kb-preview{min-height:120px;padding:12px;border:1px solid var(--line);border-radius:var(--radius);font-size:14px;line-height:1.5}
+.kb-hint{margin:0;font-size:11.5px;color:var(--panel-muted);font-family:var(--mono)}
+.kb-card-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.kb-owner{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--card-muted);margin-left:auto}
+.kb-avatar{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;font-size:10px;font-weight:600;color:var(--tag-fg)}
+.kb-card-ph{border:1.5px dashed var(--accent);border-radius:var(--radius);opacity:.6;background:var(--placeholder)}
+.kb-col-ph{flex:none;width:var(--col-w);border:1.5px dashed var(--accent);border-radius:var(--radius);background:var(--placeholder);opacity:.6}
+.kb-add{display:flex;align-items:center;gap:6px;height:34px;padding:0 8px;border:1px dashed var(--line);border-radius:var(--radius);background:transparent;color:var(--col-head-fg);cursor:pointer;opacity:.8}
+.kb-add:hover{opacity:1;border-color:var(--accent)}
+.kb-add-col{flex:none;display:inline-grid;place-items:center;width:36px;height:36px;margin-top:2px;border:0;border-radius:var(--radius);background:transparent;color:var(--col-head-fg);cursor:pointer;opacity:.2;transition:opacity .15s,background .15s}
+.kb-add-col:hover,.kb-add-col:focus-visible{opacity:1;background:var(--control)}
+.kb-burst{position:absolute;inset:0;width:100%;height:100%;z-index:45;pointer-events:none;display:block}
+@keyframes kbPop{0%{transform:scale(.6);opacity:0}60%{transform:scale(1.04);opacity:1}100%{transform:scale(1);opacity:1}}
+@keyframes kbNova{0%,35%{opacity:0;transform:scale(.3);filter:blur(8px) brightness(2)}70%{opacity:1;transform:scale(1.03);filter:blur(0) brightness(1.3)}100%{opacity:1;transform:scale(1);filter:none}}
+.kb-card.kb-anim-pop{animation:kbPop .45s cubic-bezier(.2,.9,.3,1.3)}
+.kb-card.kb-anim-nova{animation:kbNova .9s ease-out}
+@media (prefers-reduced-motion: reduce){.kb-card.kb-anim-pop,.kb-card.kb-anim-nova{animation:none}}
+.kb-actions{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.kb-primary{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 12px;border:1px solid var(--accent);border-radius:var(--radius);background:var(--accent);color:var(--accent-fg);cursor:pointer}
+.kb-primary:disabled{opacity:.45;cursor:default}
+.kb-effect{display:grid;grid-template-columns:110px minmax(0,1fr) auto;align-items:center;gap:10px;font-size:13px}
+.kb-effect label{display:contents}
+.kb-effect select{height:30px;border:1px solid var(--line);border-radius:6px;background:var(--control);padding:0 6px}
+.kb-effect .kb-link:disabled{opacity:.35;cursor:default}
+.kb-empty{margin:4px 2px;font-size:12px;color:var(--col-head-fg);opacity:.7}
+.kb-ghost{position:absolute;z-index:20;pointer-events:none}
+.kb-ghost .kb-card{box-shadow:0 18px 40px rgba(0,0,0,.22),0 2px 6px rgba(0,0,0,.12);transform:rotate(1.5deg);cursor:grabbing}
+.kb-ghost .kb-col{box-shadow:0 18px 40px rgba(0,0,0,.22);background:var(--card);color:var(--card-fg)}
+.kb-source{display:flex;flex-direction:column;min-height:0;border-left:1px solid var(--line);background:var(--source-bg);backdrop-filter:var(--header-blur)}
+.kb-mode-source .kb-source{border-left:0}
+.kb-source-bar{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:12px}
+.kb-source-bar .kb-status{flex:1;color:var(--muted)}
+.kb-md{flex:1;min-height:0;width:100%;resize:none;border:0;outline:none;padding:16px 20px;background:transparent;font-family:var(--mono);font-size:13px;line-height:1.6;tab-size:2;white-space:pre;overflow:auto}
+.kb-error{padding:10px 16px;background:var(--danger-bg);color:var(--danger-fg);font-family:var(--mono);font-size:12px;white-space:pre-wrap}
+.kb-pop{position:absolute;z-index:25;top:62px;right:20px;width:320px;max-width:calc(100% - 32px);max-height:calc(100% - 80px);overflow:auto;display:flex;flex-direction:column;gap:14px;padding:16px;border-radius:calc(var(--radius) + 4px);background:var(--panel);color:var(--panel-fg);border:1px solid var(--line);box-shadow:0 20px 50px rgba(0,0,0,.22)}
+.kb-pop h2,.kb-drawer h2{margin:0;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--panel-muted)}
+.kb-themes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.kb-theme{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:10px;border:1px solid var(--line);border-radius:var(--radius);background:transparent;cursor:pointer;text-align:left}
+.kb-theme[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.kb-swatch{display:flex;gap:3px}
+.kb-swatch span{width:14px;height:14px;border-radius:3px;border:1px solid rgba(0,0,0,.12)}
+.kb-theme small{color:var(--panel-muted);font-size:11px;line-height:1.3}
+.kb-setting{display:grid;grid-template-columns:110px minmax(0,1fr) auto;align-items:center;gap:10px;font-size:13px}
+.kb-setting input[type=range]{width:100%;accent-color:var(--accent)}
+.kb-setting input[type=color]{width:44px;height:28px;padding:0;border:1px solid var(--line);border-radius:6px;background:none;cursor:pointer}
+.kb-setting select{height:30px;border:1px solid var(--line);border-radius:6px;background:var(--control);padding:0 6px}
+.kb-setting input[type=checkbox]{width:18px;height:18px;accent-color:var(--accent)}
+.kb-setting output{font-family:var(--mono);font-size:11px;color:var(--panel-muted);min-width:42px;text-align:right}
+.kb-drawer{position:absolute;z-index:30;top:0;right:0;bottom:0;width:400px;max-width:100%;display:flex;flex-direction:column;gap:16px;padding:18px 20px;overflow:auto;background:var(--panel);color:var(--panel-fg);border-left:1px solid var(--line);box-shadow:-20px 0 50px rgba(0,0,0,.18)}
+.kb-drawer-head{display:flex;align-items:center;justify-content:space-between;gap:8px;font-family:var(--mono);font-size:12px;color:var(--panel-muted)}
+.kb-field{display:flex;flex-direction:column;gap:6px}
+.kb-field>span{font-size:12px;color:var(--panel-muted);font-weight:500}
+.kb-field input,.kb-field textarea{width:100%;border:1px solid var(--line);border-radius:var(--radius);background:var(--control);padding:8px 10px}
+.kb-field textarea{resize:vertical;min-height:110px;line-height:1.5}
+.kb-field input:focus,.kb-field textarea:focus{border-color:var(--accent);outline:none}
+.kb-field-error{margin:0;font-size:12px;color:var(--danger-fg);background:var(--danger-bg);padding:6px 8px;border-radius:var(--radius)}
+.kb-tag-edit{padding:6px;border:1px solid var(--line);border-radius:var(--radius);background:var(--control)}
+.kb-tag-edit .kb-tag-input{flex:1;min-width:90px;border:0;background:transparent;padding:4px;outline:none}
+.kb-pill-x{display:inline-grid;place-items:center;width:16px;height:16px;margin-right:-4px;border:0;border-radius:50%;background:transparent;cursor:pointer;color:inherit;opacity:.7}
+.kb-pill-x:hover{opacity:1;background:rgba(0,0,0,.12)}
+.kb-archive{position:relative;overflow:auto;min-height:0;padding:20px 24px 48px}
+.kb-archive-head{display:flex;align-items:baseline;gap:12px;margin-bottom:16px}
+.kb-archive-head h2{margin:0;font-family:var(--font-title);font-size:18px;font-weight:600;text-shadow:var(--glow)}
+.kb-archive-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(280px,100%),1fr));gap:12px;align-items:start}
+.kb-card-archived{cursor:default}
+.kb-archive-foot{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding-top:8px;border-top:1px solid var(--card-border);font-size:12px;color:var(--card-muted)}
+.kb-archive-when{flex:1 1 auto;font-family:var(--mono)}
+.kb-restore select{height:28px;max-width:140px;border:1px solid var(--card-border);border-radius:6px;background:transparent;color:inherit;padding:0 4px}
+.kb-btn-sm{height:28px;padding:0 10px;font-size:12px;color:var(--card-fg)}
+.kb-btn:disabled{opacity:.45;cursor:default}
+.kb-hist-toggle{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius);background:var(--control);cursor:pointer;text-align:left}
+.kb-hist-toggle:hover{border-color:var(--panel-muted)}
+.kb-chev{flex:none;transition:transform .15s;color:var(--panel-muted)}
+.kb-hist-toggle[aria-expanded="true"] .kb-chev{transform:rotate(90deg)}
+.kb-hist-title{font-size:12px;font-weight:500;color:var(--panel-muted)}
+.kb-hist-summary{display:flex;flex-wrap:wrap;gap:4px 14px;margin-left:auto;font-family:var(--mono);font-size:11.5px;color:var(--panel-muted)}
+.kb-hist-summary b{font-weight:600;color:var(--panel-fg)}
+.kb-hist-head{display:flex;align-items:center;gap:8px}
+.kb-history{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.kb-history li{display:grid;grid-template-columns:14px minmax(0,1fr);gap:10px;padding-bottom:12px;position:relative}
+.kb-history li::before{content:"";position:absolute;left:6px;top:14px;bottom:0;width:1px;background:var(--line)}
+.kb-history li:last-child::before{display:none}
+.kb-dot{width:9px;height:9px;margin:4px 0 0 2px;border-radius:50%;background:var(--accent)}
+.kb-history strong{font-weight:600}
+.kb-history-meta{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:12px;color:var(--panel-muted);font-family:var(--mono)}
+.kb-danger{align-self:flex-start;height:34px;padding:0 12px;border:1px solid var(--danger-fg);border-radius:var(--radius);background:transparent;color:var(--danger-fg);cursor:pointer}
+.kb-danger:hover{background:var(--danger-bg)}
+.kb-toast{position:absolute;z-index:50;left:50%;bottom:20px;transform:translateX(-50%);max-width:min(560px,calc(100% - 32px));display:flex;gap:12px;align-items:center;padding:10px 14px;border-radius:var(--radius);background:var(--danger-bg);color:var(--danger-fg);box-shadow:0 10px 30px rgba(0,0,0,.2);font-size:13px}
+.kb[data-theme="terminal"] .kb-card,.kb[data-theme="terminal"] .kb-col{border-style:solid}
+.kb[data-theme="terminal"] .kb-card-title::before{content:"> ";opacity:.6}
+.kb[data-theme="terminal"] .kb-pill{border-color:currentColor;border-radius:0}
+.kb[data-theme="paper"] .kb-card:nth-child(3n+1){transform:rotate(calc(var(--tilt) * -1deg))}
+.kb[data-theme="paper"] .kb-card:nth-child(3n+2){transform:rotate(calc(var(--tilt) * .6deg))}
+.kb[data-theme="paper"] .kb-card:nth-child(3n){transform:rotate(calc(var(--tilt) * 1deg))}
+@media (max-width: 900px){
+  .kb-mode-split{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) minmax(0,1fr)}
+  .kb-mode-split .kb-source{border-left:0;border-top:1px solid var(--line)}
+  .kb-top{padding:12px 16px}
+  .kb-board{padding:16px}
+}
+</style>
+</helmet>
+<div class="{{rootClass}}" data-kb-root="{{uid}}" data-theme="{{themeId}}" style="{{rootStyle}}">
+  <canvas class="{{canvasClass}}" data-kb-canvas="{{uid}}" aria-hidden="true"></canvas>
+
+  <header class="kb-top" data-obstacle="toolbar">
+    <div class="kb-row">
+      <input class="kb-title" aria-label="Board title" value="{{titleValue}}" onChange="{{onTitle}}" onBlur="{{onTitleBlur}}">
+      <div class="kb-search">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+        <input type="search" placeholder="Search title, description, owner, tags" aria-label="Search tasks" value="{{query}}" onChange="{{onQuery}}">
+      </div>
+      <button class="kb-btn" aria-expanded="{{filterOpen}}" onClick="{{toggleFilter}}">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"></path></svg>
+        <span>Filter</span>
+        <sc-if value="{{hasActiveFilters}}" hint-placeholder-val="{{ false }}"><span class="kb-count">{{activeFilterCount}}</span></sc-if>
+      </button>
+      <div class="kb-seg" role="group" aria-label="View">
+        <sc-for list="{{modes}}" as="m" hint-placeholder-count="3">
+          <button class="kb-seg-btn" aria-pressed="{{m.pressed}}" onClick="{{m.pick}}">{{m.label}}</button>
+        </sc-for>
+      </div>
+      <button class="kb-btn" aria-expanded="{{pickerOpen}}" onClick="{{togglePicker}}">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 3a9 9 0 0 0 0 18c1.5 0 2-1 2-2s-1-1.5-1-2.5 1-1.5 2-1.5h2a4 4 0 0 0 4-4c0-4.4-4-8-9-8z"></path><circle cx="7.5" cy="11" r="1"></circle><circle cx="10" cy="7" r="1"></circle><circle cx="15" cy="7" r="1"></circle></svg>
+        <span>{{themeName}}</span>
+      </button>
+    </div>
+    <sc-if value="{{filterOpen}}" hint-placeholder-val="{{ false }}">
+      <div class="kb-filters">
+        <div class="kb-fgroup">
+          <span class="kb-flabel">Tags</span>
+          <div class="kb-pills">
+            <sc-for list="{{tagOptions}}" as="o" hint-placeholder-count="4">
+              <button class="kb-pill kb-toggle" aria-pressed="{{o.pressed}}" style="{{o.style}}" onClick="{{o.toggle}}">{{o.label}}</button>
+            </sc-for>
+            <sc-if value="{{noTags}}" hint-placeholder-val="{{ false }}"><span class="kb-muted">No tags yet</span></sc-if>
+          </div>
+        </div>
+        <div class="kb-fgroup">
+          <span class="kb-flabel">Owner</span>
+          <div class="kb-pills">
+            <sc-for list="{{ownerOptions}}" as="o" hint-placeholder-count="3">
+              <button class="kb-pill kb-toggle kb-owner-toggle" aria-pressed="{{o.pressed}}" onClick="{{o.toggle}}">{{o.label}}</button>
+            </sc-for>
+          </div>
+        </div>
+        <sc-if value="{{hasActiveFilters}}" hint-placeholder-val="{{ false }}">
+          <button class="kb-link" onClick="{{clearFilters}}">Clear filters</button>
+        </sc-if>
+      </div>
+    </sc-if>
+  </header>
+
+  <sc-if value="{{effectError}}" hint-placeholder-val="{{ false }}">
+    <div class="kb-banner" role="alert"><span>{{effectError}}</span></div>
+  </sc-if>
+  <sc-if value="{{hasParseError}}" hint-placeholder-val="{{ false }}">
+    <div class="kb-banner" role="status"><span>The board is locked until the markdown parses again.</span></div>
+  </sc-if>
+
+  <main class="{{mainClass}}">
+    <sc-if value="{{showBoard}}" hint-placeholder-val="{{ true }}">
+      <section class="{{boardClass}}" aria-label="Board" data-kb-scroller="{{uid}}">
+        <sc-for list="{{columns}}" as="col" hint-placeholder-count="4">
+          <sc-if value="{{col.isPlaceholder}}" hint-placeholder-val="{{ false }}">
+            <div class="kb-col-ph" style="{{col.phStyle}}"></div>
+          </sc-if>
+          <sc-if value="{{col.isColumn}}" hint-placeholder-val="{{ true }}">
+            <div class="kb-col" data-col-drop="{{col.id}}">
+              <div class="kb-col-head">
+                <button class="kb-icon kb-grip" aria-label="{{col.gripLabel}}" onPointerDown="{{col.onGrip}}">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.6"></circle><circle cx="15" cy="6" r="1.6"></circle><circle cx="9" cy="12" r="1.6"></circle><circle cx="15" cy="12" r="1.6"></circle><circle cx="9" cy="18" r="1.6"></circle><circle cx="15" cy="18" r="1.6"></circle></svg>
+                </button>
+                <input class="kb-col-name" aria-label="Column name" value="{{col.nameValue}}" onChange="{{col.onName}}" onBlur="{{col.onNameBlur}}">
+                <span class="kb-col-count">{{col.countLabel}}</span>
+                <button class="kb-icon" aria-label="{{col.deleteLabel}}" title="{{col.deleteTitle}}" disabled="{{col.deleteDisabled}}" onClick="{{col.onDelete}}">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+                </button>
+              </div>
+              <sc-if value="{{col.nameError}}" hint-placeholder-val="{{ false }}"><p class="kb-field-error">{{col.nameError}}</p></sc-if>
+              <div class="kb-cards">
+                <sc-for list="{{col.items}}" as="it" hint-placeholder-count="2">
+                  <sc-if value="{{it.isPlaceholder}}" hint-placeholder-val="{{ false }}">
+                    <div class="kb-card-ph" style="{{it.phStyle}}"></div>
+                  </sc-if>
+                  <sc-if value="{{it.isTask}}" hint-placeholder-val="{{ true }}">
+                    <article class="{{it.cardClass}}" data-obstacle="{{it.obstacleId}}" data-card-slot="{{it.id}}" onPointerDown="{{it.onPointerDown}}">
+                      <button class="kb-card-title" onClick="{{it.open}}">{{it.title}}</button>
+                      <sc-if value="{{it.hasDescription}}" hint-placeholder-val="{{ false }}"><div class="{{it.descClass}}"><sc-for list="{{it.desc}}" as="blk" hint-placeholder-count="1"><sc-if value="{{blk.isPara}}" hint-placeholder-val="{{ true }}"><p class="md-p"><sc-for list="{{blk.spans}}" as="sp"><sc-if value="{{sp.isLink}}" hint-placeholder-val="{{ false }}"><a class="{{sp.cls}}" href="{{sp.href}}" target="_blank" rel="noopener noreferrer">{{sp.text}}</a></sc-if><sc-if value="{{sp.isPlain}}" hint-placeholder-val="{{ true }}"><span class="{{sp.cls}}">{{sp.text}}</span></sc-if></sc-for></p></sc-if><sc-if value="{{blk.isHeading}}" hint-placeholder-val="{{ false }}"><p class="md-h"><sc-for list="{{blk.spans}}" as="sp"><sc-if value="{{sp.isLink}}" hint-placeholder-val="{{ false }}"><a class="{{sp.cls}}" href="{{sp.href}}" target="_blank" rel="noopener noreferrer">{{sp.text}}</a></sc-if><sc-if value="{{sp.isPlain}}" hint-placeholder-val="{{ true }}"><span class="{{sp.cls}}">{{sp.text}}</span></sc-if></sc-for></p></sc-if><sc-if value="{{blk.isQuote}}" hint-placeholder-val="{{ false }}"><blockquote class="md-q"><sc-for list="{{blk.spans}}" as="sp"><sc-if value="{{sp.isLink}}" hint-placeholder-val="{{ false }}"><a class="{{sp.cls}}" href="{{sp.href}}" target="_blank" rel="noopener noreferrer">{{sp.text}}</a></sc-if><sc-if value="{{sp.isPlain}}" hint-placeholder-val="{{ true }}"><span class="{{sp.cls}}">{{sp.text}}</span></sc-if></sc-for></blockquote></sc-if><sc-if value="{{blk.isCode}}" hint-placeholder-val="{{ false }}"><pre class="md-pre"><code>{{blk.text}}</code></pre></sc-if><sc-if value="{{blk.isRule}}" hint-placeholder-val="{{ false }}"><hr class="md-hr"></sc-if><sc-if value="{{blk.isList}}" hint-placeholder-val="{{ false }}"><ul class="md-list"><sc-for list="{{blk.items}}" as="li"><li class="md-li" style="{{li.style}}"><sc-if value="{{li.isCheck}}" hint-placeholder-val="{{ false }}"><input type="checkbox" aria-label="{{li.checkLabel}}" checked="{{li.checked}}" onChange="{{li.toggle}}"></sc-if><sc-if value="{{li.isMarker}}" hint-placeholder-val="{{ true }}"><span class="md-marker" aria-hidden="true">{{li.marker}}</span></sc-if><span class="{{li.bodyCls}}"><sc-for list="{{li.spans}}" as="sp"><sc-if value="{{sp.isLink}}" hint-placeholder-val="{{ false }}"><a class="{{sp.cls}}" href="{{sp.href}}" target="_blank" rel="noopener noreferrer">{{sp.text}}</a></sc-if><sc-if value="{{sp.isPlain}}" hint-placeholder-val="{{ true }}"><span class="{{sp.cls}}">{{sp.text}}</span></sc-if></sc-for></span></li></sc-for></ul></sc-if></sc-for></div></sc-if>
+                      <sc-if value="{{it.hasFoot}}" hint-placeholder-val="{{ true }}">
+                        <div class="kb-card-foot">
+                          <div class="kb-pills">
+                            <sc-for list="{{it.tags}}" as="tg" hint-placeholder-count="1"><span class="kb-pill" style="{{tg.style}}">{{tg.label}}</span></sc-for>
+                          </div>
+                          <sc-if value="{{it.hasOwner}}" hint-placeholder-val="{{ true }}">
+                            <span class="kb-owner"><span class="kb-avatar" style="{{it.avatarStyle}}" aria-hidden="true">{{it.initials}}</span>{{it.owner}}</span>
+                          </sc-if>
+                        </div>
+                      </sc-if>
+                    </article>
+                  </sc-if>
+                </sc-for>
+                <sc-if value="{{col.showEmpty}}" hint-placeholder-val="{{ false }}"><p class="kb-empty">{{col.emptyLabel}}</p></sc-if>
+              </div>
+              <button class="kb-add" onClick="{{col.onAddTask}}">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+                <span>Add task</span>
+              </button>
+            </div>
+          </sc-if>
+        </sc-for>
+        <button class="kb-add-col" aria-label="Add column" title="Add column" onClick="{{addColumn}}">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+        </button>
+      </section>
+    </sc-if>
+
+
+    <sc-if value="{{showArchive}}" hint-placeholder-val="{{ false }}">
+      <section class="kb-archive" aria-label="Archive">
+        <div class="kb-archive-head">
+          <h2>Archive</h2>
+          <span class="kb-muted">{{archiveCountLabel}}</span>
+        </div>
+        <sc-if value="{{archiveEmpty}}" hint-placeholder-val="{{ false }}"><p class="kb-muted">{{archiveEmptyLabel}}</p></sc-if>
+        <div class="kb-archive-grid">
+          <sc-for list="{{archived}}" as="it" hint-placeholder-count="3">
+            <article class="kb-card kb-card-archived">
+              <button class="kb-card-title" onClick="{{it.open}}">{{it.title}}</button>
+              <sc-if value="{{it.hasDescription}}" hint-placeholder-val="{{ false }}"><div class="{{it.descClass}}"><sc-for list="{{it.desc}}" as="blk" hint-placeholder-count="1"><sc-if value="{{blk.isPara}}" hint-placeholder-val="{{ true }}"><p class="md-p"><sc-for list="{{blk.spans}}" as="sp"><sc-if value="{{sp.isLink}}" hint-placeholder-val="{{ false }}"><a class="{{sp.cls}}" href="{{sp.href}}" target="_blank" rel="noopener noreferrer">{{sp.text}}</a></sc-if><sc-if value="{{sp.isPlain}}" hint-placeholder-val="{{ true }}"><span class="{{sp.cls}}">{{sp.text}}</span></sc-if></sc-for></p></sc-if><sc-if value="{{blk.isHeading}}" hint-placeholder-val="{{ false }}"><p class="md-h"><sc-for list="{{blk.spans}}" as="sp"><sc-if value="{{sp.isLink}}" hint-placeholder-val="{{ false }}"><a class="{{sp.cls}}" href="{{sp.href}}" target="_blank" rel="noopener noreferrer">{{sp.text}}</a></sc-if><sc-if value="{{sp.isPlain}}" hint-placeholder-val="{{ true }}"><span class="{{sp.cls}}">{{sp.text}}</span></sc-if></sc-for></p></sc-if><sc-if value="{{blk.isQuote}}" hint-placeholder-val="{{ false }}"><blockquote class="md-q"><sc-for list="{{blk.spans}}" as="sp"><sc-if value="{{sp.isLink}}" hint-placeholder-val="{{ false }}"><a class="{{sp.cls}}" href="{{sp.href}}" target="_blank" rel="noopener noreferrer">{{sp.text}}</a></sc-if><sc-if value="{{sp.isPlain}}" hint-placeholder-val="{{ true }}"><span class="{{sp.cls}}">{{sp.text}}</span></sc-if></sc-for></blockquote></sc-if><sc-if value="{{blk.isCode}}" hint-placeholder-val="{{ false }}"><pre class="md-pre"><code>{{blk.text}}</code></pre></sc-if><sc-if value="{{blk.isRule}}" hint-placeholder-val="{{ false }}"><hr class="md-hr"></sc-if><sc-if value="{{blk.isList}}" hint-placeholder-val="{{ false }}"><ul class="md-list"><sc-for list="{{blk.items}}" as="li"><li class="md-li" style="{{li.style}}"><sc-if value="{{li.isCheck}}" hint-placeholder-val="{{ false }}"><input type="checkbox" aria-label="{{li.checkLabel}}" checked="{{li.checked}}" onChange="{{li.toggle}}"></sc-if><sc-if value="{{li.isMarker}}" hint-placeholder-val="{{ true }}"><span class="md-marker" aria-hidden="true">{{li.marker}}</span></sc-if><span class="{{li.bodyCls}}"><sc-for list="{{li.spans}}" as="sp"><sc-if value="{{sp.isLink}}" hint-placeholder-val="{{ false }}"><a class="{{sp.cls}}" href="{{sp.href}}" target="_blank" rel="noopener noreferrer">{{sp.text}}</a></sc-if><sc-if value="{{sp.isPlain}}" hint-placeholder-val="{{ true }}"><span class="{{sp.cls}}">{{sp.text}}</span></sc-if></sc-for></span></li></sc-for></ul></sc-if></sc-for></div></sc-if>
+              <sc-if value="{{it.hasFoot}}" hint-placeholder-val="{{ true }}">
+                        <div class="kb-card-foot">
+                          <div class="kb-pills">
+                            <sc-for list="{{it.tags}}" as="tg" hint-placeholder-count="1"><span class="kb-pill" style="{{tg.style}}">{{tg.label}}</span></sc-for>
+                          </div>
+                          <sc-if value="{{it.hasOwner}}" hint-placeholder-val="{{ true }}">
+                            <span class="kb-owner"><span class="kb-avatar" style="{{it.avatarStyle}}" aria-hidden="true">{{it.initials}}</span>{{it.owner}}</span>
+                          </sc-if>
+                        </div>
+                      </sc-if>
+              <div class="kb-archive-foot">
+                <span class="kb-archive-when">{{it.completedAgo}}</span>
+                <label class="kb-restore">
+                  <select aria-label="{{it.restoreLabel}}" value="{{it.restoreTo}}" disabled="{{it.restoreDisabled}}" onChange="{{it.onRestoreTo}}"><sc-for list="{{it.restoreOptions}}" as="ro"><option value="{{ro.value}}">{{ro.label}}</option></sc-for></select>
+                </label>
+                <button class="kb-btn kb-btn-sm" disabled="{{it.restoreDisabled}}" onClick="{{it.restore}}">Restore</button>
+              </div>
+            </article>
+          </sc-for>
+        </div>
+      </section>
+    </sc-if>
+
+    <sc-if value="{{showSource}}" hint-placeholder-val="{{ false }}">
+      <section class="kb-source" aria-label="Markdown source">
+        <div class="kb-source-bar">
+          <span>board.md</span>
+          <span class="kb-status">{{saveStatus}}</span>
+          <button class="kb-btn" onClick="{{copySource}}">{{copyLabel}}</button>
+        </div>
+        <textarea class="kb-md" spellcheck="false" aria-label="Markdown source" value="{{sourceText}}" onChange="{{onSource}}" onBlur="{{onSourceBlur}}"></textarea>
+        <sc-if value="{{hasParseError}}" hint-placeholder-val="{{ false }}"><div class="kb-error" role="alert">{{parseError}}</div></sc-if>
+      </section>
+    </sc-if>
+  </main>
+
+  <sc-if value="{{pickerOpen}}" hint-placeholder-val="{{ false }}">
+    <div class="kb-pop" role="dialog" aria-label="Style">
+      <h2>Style</h2>
+      <div class="kb-themes">
+        <sc-for list="{{themeOptions}}" as="t" hint-placeholder-count="5">
+          <button class="kb-theme" aria-pressed="{{t.pressed}}" onClick="{{t.pick}}">
+            <span class="kb-swatch" aria-hidden="true"><sc-for list="{{t.swatch}}" as="sw"><span style="{{sw.style}}"></span></sc-for></span>
+            <strong>{{t.name}}</strong>
+            <small>{{t.blurb}}</small>
+          </button>
+        </sc-for>
+      </div>
+      <h2>{{themeName}} settings</h2>
+      <sc-for list="{{settingControls}}" as="c" hint-placeholder-count="4">
+        <label class="kb-setting">
+          <span>{{c.label}}</span>
+          <sc-if value="{{c.isRange}}" hint-placeholder-val="{{ true }}"><input type="range" min="{{c.min}}" max="{{c.max}}" step="{{c.step}}" value="{{c.value}}" onChange="{{c.onChange}}"></sc-if>
+          <sc-if value="{{c.isColor}}" hint-placeholder-val="{{ false }}"><input type="color" value="{{c.value}}" onChange="{{c.onChange}}"></sc-if>
+          <sc-if value="{{c.isSelect}}" hint-placeholder-val="{{ false }}">
+            <select value="{{c.value}}" onChange="{{c.onChange}}"><sc-for list="{{c.options}}" as="op"><option value="{{op.value}}">{{op.label}}</option></sc-for></select>
+          </sc-if>
+          <sc-if value="{{c.isBoolean}}" hint-placeholder-val="{{ false }}"><input type="checkbox" checked="{{c.checked}}" onChange="{{c.onChange}}"></sc-if>
+          <output>{{c.valueLabel}}</output>
+        </label>
+      </sc-for>
+      <button class="kb-link" onClick="{{resetTheme}}">Reset {{themeName}} settings</button>
+      <h2>Effects</h2>
+      <sc-for list="{{effectControls}}" as="ec" hint-placeholder-count="3">
+        <div class="kb-effect">
+          <label>
+            <span>{{ec.label}}</span>
+            <select value="{{ec.value}}" onChange="{{ec.onChange}}"><sc-for list="{{ec.options}}" as="op"><option value="{{op.value}}">{{op.label}}</option></sc-for></select>
+          </label>
+          <button class="kb-link" aria-label="{{ec.tryLabel}}" disabled="{{ec.tryDisabled}}" onClick="{{ec.tryIt}}">Try</button>
+        </div>
+      </sc-for>
+      <sc-if value="{{storageWarning}}" hint-placeholder-val="{{ false }}"><p class="kb-field-error">{{storageWarning}}</p></sc-if>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{isDragging}}" hint-placeholder-val="{{ false }}">
+    <div class="kb-ghost" style="{{ghostStyle}}">
+      <sc-if value="{{ghost.isTask}}" hint-placeholder-val="{{ false }}">
+        <article class="kb-card" data-obstacle="{{ghost.obstacleId}}">
+          <span class="kb-card-title">{{ghost.title}}</span>
+          <sc-if value="{{ghost.hasDescription}}" hint-placeholder-val="{{ false }}"><div class="{{ghost.descClass}}"><sc-for list="{{ghost.desc}}" as="blk" hint-placeholder-count="1"><sc-if value="{{blk.isPara}}" hint-placeholder-val="{{ true }}"><p class="md-p"><sc-for list="{{blk.spans}}" as="sp"><sc-if value="{{sp.isLink}}" hint-placeholder-val="{{ false }}"><a class="{{sp.cls}}" href="{{sp.href}}" target="_blank" rel="noopener noreferrer">{{sp.text}}</a></sc-if><sc-if value="{{sp.isPlain}}" hint-placeholder-val="{{ true }}"><span class="{{sp.cls}}">{{sp.text}}</span></sc-if></sc-for></p></sc-if><sc-if value="{{blk.isHeading}}" hint-placeholder-val="{{ false }}"><p class="md-h"><sc-for list="{{blk.spans}}" as="sp"><sc-if value="{{sp.isLink}}" hint-placeholder-val="{{ false }}"><a class="{{sp.cls}}" href="{{sp.href}}" target="_blank" rel="noopener noreferrer">{{sp.text}}</a></sc-if><sc-if value="{{sp.isPlain}}" hint-placeholder-val="{{ true }}"><span class="{{sp.cls}}">{{sp.text}}</span></sc-if></sc-for></p></sc-if><sc-if value="{{blk.isQuote}}" hint-placeholder-val="{{ false }}"><blockquote class="md-q"><sc-for list="{{blk.spans}}" as="sp"><sc-if value="{{sp.isLink}}" hint-placeholder-val="{{ false }}"><a class="{{sp.cls}}" href="{{sp.href}}" target="_blank" rel="noopener noreferrer">{{sp.text}}</a></sc-if><sc-if value="{{sp.isPlain}}" hint-placeholder-val="{{ true }}"><span class="{{sp.cls}}">{{sp.text}}</span></sc-if></sc-for></blockquote></sc-if><sc-if value="{{blk.isCode}}" hint-placeholder-val="{{ false }}"><pre class="md-pre"><code>{{blk.text}}</code></pre></sc-if><sc-if value="{{blk.isRule}}" hint-placeholder-val="{{ false }}"><hr class="md-hr"></sc-if><sc-if value="{{blk.isList}}" hint-placeholder-val="{{ false }}"><ul class="md-list"><sc-for list="{{blk.items}}" as="li"><li class="md-li" style="{{li.style}}"><sc-if value="{{li.isCheck}}" hint-placeholder-val="{{ false }}"><input type="checkbox" aria-label="{{li.checkLabel}}" checked="{{li.checked}}" onChange="{{li.toggle}}"></sc-if><sc-if value="{{li.isMarker}}" hint-placeholder-val="{{ true }}"><span class="md-marker" aria-hidden="true">{{li.marker}}</span></sc-if><span class="{{li.bodyCls}}"><sc-for list="{{li.spans}}" as="sp"><sc-if value="{{sp.isLink}}" hint-placeholder-val="{{ false }}"><a class="{{sp.cls}}" href="{{sp.href}}" target="_blank" rel="noopener noreferrer">{{sp.text}}</a></sc-if><sc-if value="{{sp.isPlain}}" hint-placeholder-val="{{ true }}"><span class="{{sp.cls}}">{{sp.text}}</span></sc-if></sc-for></span></li></sc-for></ul></sc-if></sc-for></div></sc-if>
+          <sc-if value="{{ghost.hasFoot}}" hint-placeholder-val="{{ false }}">
+            <div class="kb-card-foot">
+              <div class="kb-pills"><sc-for list="{{ghost.tags}}" as="tg"><span class="kb-pill" style="{{tg.style}}">{{tg.label}}</span></sc-for></div>
+              <sc-if value="{{ghost.hasOwner}}" hint-placeholder-val="{{ false }}"><span class="kb-owner"><span class="kb-avatar" style="{{ghost.avatarStyle}}" aria-hidden="true">{{ghost.initials}}</span>{{ghost.owner}}</span></sc-if>
+            </div>
+          </sc-if>
+        </article>
+      </sc-if>
+      <sc-if value="{{ghost.isColumn}}" hint-placeholder-val="{{ false }}">
+        <div class="kb-col" data-obstacle="{{ghost.obstacleId}}">
+          <div class="kb-col-head"><span class="kb-col-name">{{ghost.name}}</span><span class="kb-col-count">{{ghost.countLabel}}</span></div>
+        </div>
+      </sc-if>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{editorOpen}}" hint-placeholder-val="{{ false }}">
+    <aside class="kb-drawer" aria-label="Task details">
+      <div class="kb-drawer-head">
+        <span>{{editor.id}} · in {{editor.columnName}}</span>
+        <button class="kb-icon" aria-label="Close task details" onClick="{{closeEditor}}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+        </button>
+      </div>
+      <label class="kb-field">
+        <span>Title</span>
+        <input value="{{editor.title}}" onChange="{{editor.onTitle}}" onBlur="{{editor.onBlurTitle}}">
+      </label>
+      <sc-if value="{{editor.titleError}}" hint-placeholder-val="{{ false }}"><p class="kb-field-error">{{editor.titleError}}</p></sc-if>
+      <label class="kb-field">
+        <span>Owner</span>
+        <input value="{{editor.owner}}" placeholder="Unassigned" list="{{ownerListId}}" onChange="{{editor.onOwner}}" onKeyDown="{{editor.onOwnerKey}}" onBlur="{{editor.onBlurOwner}}">
+      </label>
+      <datalist id="{{ownerListId}}"><sc-for list="{{ownerNames}}" as="on"><option value="{{on}}"></option></sc-for></datalist>
+      <sc-if value="{{editor.ownerError}}" hint-placeholder-val="{{ false }}"><p class="kb-field-error">{{editor.ownerError}}</p></sc-if>
+      <div class="kb-field">
+        <div class="kb-desc-head">
+          <span>Description</span>
+          <div class="kb-tabs" role="group" aria-label="Description view">
+            <button class="kb-tab" aria-pressed="{{editor.isWrite}}" onClick="{{editor.showWrite}}">Write</button>
+            <button class="kb-tab" aria-pressed="{{editor.isPreview}}" onClick="{{editor.showPreview}}">Preview</button>
+          </div>
+        </div>
+        <sc-if value="{{editor.isWrite}}" hint-placeholder-val="{{ true }}">
+          <div class="kb-md-editor">
+            <div class="kb-fmtbar" role="toolbar" aria-label="Formatting">
+              <sc-for list="{{editor.formatButtons}}" as="fb" hint-placeholder-count="10">
+                <button class="{{fb.cls}}" aria-label="{{fb.label}}" title="{{fb.title}}" onMouseDown="{{fb.keepFocus}}" onClick="{{fb.apply}}">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{fb.d}}"></path></svg>
+                </button>
+              </sc-for>
+            </div>
+            <textarea data-kb-desc="{{uid}}" aria-label="Description (markdown)" spellcheck="true" value="{{editor.description}}" onChange="{{editor.onDescription}}" onKeyDown="{{editor.onDescriptionKey}}" onBlur="{{editor.onBlurDescription}}"></textarea>
+          </div>
+          <p class="kb-hint">**bold** *italic* `code` - list 1. list - [ ] todo &gt; quote</p>
+        </sc-if>
+        <sc-if value="{{editor.isPreview}}" hint-placeholder-val="{{ false }}">
+          <div class="kb-preview md">
+            <sc-for list="{{editor.preview}}" as="blk" hint-placeholder-count="1"><sc-if value="{{blk.isPara}}" hint-placeholder-val="{{ true }}"><p class="md-p"><sc-for list="{{blk.spans}}" as="sp"><sc-if value="{{sp.isLink}}" hint-placeholder-val="{{ false }}"><a class="{{sp.cls}}" href="{{sp.href}}" target="_blank" rel="noopener noreferrer">{{sp.text}}</a></sc-if><sc-if value="{{sp.isPlain}}" hint-placeholder-val="{{ true }}"><span class="{{sp.cls}}">{{sp.text}}</span></sc-if></sc-for></p></sc-if><sc-if value="{{blk.isHeading}}" hint-placeholder-val="{{ false }}"><p class="md-h"><sc-for list="{{blk.spans}}" as="sp"><sc-if value="{{sp.isLink}}" hint-placeholder-val="{{ false }}"><a class="{{sp.cls}}" href="{{sp.href}}" target="_blank" rel="noopener noreferrer">{{sp.text}}</a></sc-if><sc-if value="{{sp.isPlain}}" hint-placeholder-val="{{ true }}"><span class="{{sp.cls}}">{{sp.text}}</span></sc-if></sc-for></p></sc-if><sc-if value="{{blk.isQuote}}" hint-placeholder-val="{{ false }}"><blockquote class="md-q"><sc-for list="{{blk.spans}}" as="sp"><sc-if value="{{sp.isLink}}" hint-placeholder-val="{{ false }}"><a class="{{sp.cls}}" href="{{sp.href}}" target="_blank" rel="noopener noreferrer">{{sp.text}}</a></sc-if><sc-if value="{{sp.isPlain}}" hint-placeholder-val="{{ true }}"><span class="{{sp.cls}}">{{sp.text}}</span></sc-if></sc-for></blockquote></sc-if><sc-if value="{{blk.isCode}}" hint-placeholder-val="{{ false }}"><pre class="md-pre"><code>{{blk.text}}</code></pre></sc-if><sc-if value="{{blk.isRule}}" hint-placeholder-val="{{ false }}"><hr class="md-hr"></sc-if><sc-if value="{{blk.isList}}" hint-placeholder-val="{{ false }}"><ul class="md-list"><sc-for list="{{blk.items}}" as="li"><li class="md-li" style="{{li.style}}"><sc-if value="{{li.isCheck}}" hint-placeholder-val="{{ false }}"><input type="checkbox" aria-label="{{li.checkLabel}}" checked="{{li.checked}}" onChange="{{li.toggle}}"></sc-if><sc-if value="{{li.isMarker}}" hint-placeholder-val="{{ true }}"><span class="md-marker" aria-hidden="true">{{li.marker}}</span></sc-if><span class="{{li.bodyCls}}"><sc-for list="{{li.spans}}" as="sp"><sc-if value="{{sp.isLink}}" hint-placeholder-val="{{ false }}"><a class="{{sp.cls}}" href="{{sp.href}}" target="_blank" rel="noopener noreferrer">{{sp.text}}</a></sc-if><sc-if value="{{sp.isPlain}}" hint-placeholder-val="{{ true }}"><span class="{{sp.cls}}">{{sp.text}}</span></sc-if></sc-for></span></li></sc-for></ul></sc-if></sc-for>
+            <sc-if value="{{editor.previewEmpty}}" hint-placeholder-val="{{ false }}"><p class="md-p kb-muted">Nothing to preview yet.</p></sc-if>
+          </div>
+        </sc-if>
+      </div>
+      <sc-if value="{{editor.descriptionError}}" hint-placeholder-val="{{ false }}"><p class="kb-field-error">{{editor.descriptionError}}</p></sc-if>
+      <div class="kb-field">
+        <span>Tags</span>
+        <div class="kb-pills kb-tag-edit">
+          <sc-for list="{{editor.tags}}" as="tg">
+            <span class="kb-pill" style="{{tg.style}}">{{tg.label}}<button class="kb-pill-x" aria-label="{{tg.removeLabel}}" onClick="{{tg.remove}}"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button></span>
+          </sc-for>
+          <input class="kb-tag-input" placeholder="Add tag, press Enter" aria-label="Add tag" list="{{tagListId}}" value="{{tagInput}}" onChange="{{onTagInput}}" onKeyDown="{{onTagKey}}">
+          <datalist id="{{tagListId}}"><sc-for list="{{tagNames}}" as="tn"><option value="{{tn}}"></option></sc-for></datalist>
+        </div>
+      </div>
+      <div class="kb-field">
+        <button class="kb-hist-toggle" aria-expanded="{{editor.historyOpen}}" onClick="{{editor.toggleHistory}}">
+          <svg class="kb-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"></path></svg>
+          <span class="kb-hist-title">History</span>
+          <span class="kb-hist-summary">
+            <sc-for list="{{editor.summary}}" as="si" hint-placeholder-count="3"><span>{{si.column}}: <b>{{si.duration}}</b></span></sc-for>
+          </span>
+        </button>
+        <sc-if value="{{editor.historyOpen}}" hint-placeholder-val="{{ false }}">
+          <ol class="kb-history">
+            <sc-for list="{{editor.history}}" as="h" hint-placeholder-count="2">
+              <li>
+                <span class="kb-dot" aria-hidden="true"></span>
+                <div>
+                  <div class="kb-hist-head"><strong>{{h.title}}</strong></div>
+                  <div class="kb-history-meta"><span>{{h.label}}</span><span>{{h.owner}}</span><span>{{h.duration}}</span></div>
+                </div>
+              </li>
+            </sc-for>
+          </ol>
+        </sc-if>
+      </div>
+      <div class="kb-actions">
+        <button class="kb-primary" disabled="{{editor.completeDisabled}}" title="{{editor.completeTitle}}" onClick="{{editor.onComplete}}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5L20 7"></path></svg>
+          <span>{{editor.completeLabel}}</span>
+        </button>
+        <button class="kb-danger" onClick="{{editor.onDelete}}">Delete task</button>
+      </div>
+    </aside>
+  </sc-if>
+
+  <canvas class="kb-burst" data-kb-burst="{{uid}}" aria-hidden="true"></canvas>
+
+  <sc-if value="{{opError}}" hint-placeholder-val="{{ false }}">
+    <div class="kb-toast" role="alert">
+      <span>{{opError}}</span>
+      <button class="kb-icon" aria-label="Dismiss error" onClick="{{dismissError}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"startTheme":{"editor":"enum","options":["minimal","paper","terminal","ocean","ballpit"],"default":"minimal","section":"Board"},"$preview":{"width":1440,"height":900}}'>
+/* =====================================================================
+ * Markdown agile board.
+ * Layers: (1) schema + validation, (2) markdown parse/serialize,
+ * (3) pure board operations, (4) themes, (5) WebGL effects,
+ * (6) the Component, which is the only place with IO (clock, DOM,
+ * storage, animation frames).
+ * ===================================================================== */
+
+function fail(message) { throw new Error(message); }
+function bug(message) { throw new Error('bug: this should never happen: ' + message); }
+
+/* ---------- (1) Schema: a tiny TypeBox-style builder that validates ---------- */
+
+const T = {
+  String: (o) => ({ kind: 'string', ...o }),
+  Array: (items, o) => ({ kind: 'array', items, ...o }),
+  Object: (props, o) => ({ kind: 'object', props, ...o }),
+  /** For shapes the builder can't express (records keyed by registry ids); `validate(value, path)` throws. */
+  Custom: (o) => ({ kind: 'custom', ...o }),
+};
+
+function check(schema, value, path) {
+  switch (schema.kind) {
+    case 'string': {
+      if (typeof value !== 'string') fail(`${path}: expected text, got ${typeof value}`);
+      if (schema.minLength !== undefined && value.length < schema.minLength) fail(`${path}: can't be empty`);
+      if (schema.pattern !== undefined && !schema.pattern.test(value)) fail(`${path}: "${value}" ${schema.patternHint}`);
+      if (schema.refine !== undefined) schema.refine(value, path);
+      return;
+    }
+    case 'array': {
+      if (!Array.isArray(value)) fail(`${path}: expected a list`);
+      if (schema.minItems !== undefined && value.length < schema.minItems) fail(`${path}: needs at least ${schema.minItems} entr${schema.minItems === 1 ? 'y' : 'ies'}`);
+      value.forEach((v, i) => check(schema.items, v, `${path}[${i}]`));
+      if (schema.unique === true && new Set(value).size !== value.length) fail(`${path}: contains duplicates`);
+      return;
+    }
+    case 'object': {
+      if (value === null || typeof value !== 'object' || Array.isArray(value)) fail(`${path}: expected an object`);
+      for (const key of Object.keys(value)) if (!(key in schema.props)) fail(`${path}: unknown field "${key}"`);
+      for (const [key, sub] of Object.entries(schema.props)) {
+        if (!(key in value)) fail(`${path}: missing field "${key}"`);
+        check(sub, value[key], `${path}.${key}`);
+      }
+      return;
+    }
+    case 'custom': schema.validate(value, path); return;
+    default: bug(`unknown schema kind "${schema.kind}"`);
+  }
+}
+
+const SINGLE_LINE = /^[^\r\n]*$/;
+const noOuterSpace = (v, path) => { if (v !== v.trim()) fail(`${path}: remove leading or trailing spaces`); };
+
+const Stamp = T.String({
+  doc: 'UTC instant the task entered a column. Written by the app at the moment of the move (the clock is read only at the UI edge and passed in), so it sorts as text and round-trips exactly.',
+  example: '2026-10-27T10:02:00.000Z',
+  pattern: /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?Z$/,
+  patternHint: 'is not a UTC timestamp like 2026-10-27T10:02:00Z',
+  refine: (v, path) => { if (Number.isNaN(Date.parse(v))) fail(`${path}: "${v}" is not a real date`); },
+});
+
+const OwnerName = T.String({
+  doc: 'Display name of whoever is responsible. Empty string means unassigned. Free text, so the board needs no user directory.',
+  example: 'Aaron', pattern: SINGLE_LINE, patternHint: 'must be one line', refine: noOuterSpace,
+});
+
+const HistoryEntry = T.Object({
+  column: T.String({
+    doc: 'Column name at the moment of entry. Stored as a name, not an id, so the markdown stays readable and history stays truthful after a rename or delete.',
+    example: 'Doing', minLength: 1, pattern: SINGLE_LINE, patternHint: 'must be one line', refine: noOuterSpace,
+  }),
+  at: Stamp,
+  owner: { ...OwnerName, doc: 'Owner at the moment of entry ("" = unassigned): who had the task while it sat in this column.' },
+}, { doc: 'One arrival. The first entry is creation; each later entry is a move to a different column (reordering within a column adds nothing). A same-column entry with a new owner is a reassignment. Written as "  - Doing @ 2026-10-27T10:02:00Z by Aaron" ("by …" left off when unassigned).' });
+
+const Tag = T.String({
+  doc: 'Free-form category label shown as a pill and used by the Tags filter. Commas separate tags in markdown, so a tag can\'t contain one.',
+  example: 'frontend', minLength: 1, pattern: /^[^,\r\n]+$/, patternHint: 'can\'t contain commas or line breaks', refine: noOuterSpace,
+});
+
+const Task = T.Object({
+  id: T.String({
+    doc: 'Stable identity for drag/drop, editing and markdown round-trips. Unique across the board. New tasks get the next t-NN.',
+    example: 't-07', pattern: /^[A-Za-z0-9_-]+$/, patternHint: 'may only use letters, digits, "-" and "_"',
+  }),
+  title: T.String({
+    doc: 'One-line summary shown on the card; also the "### " heading in markdown.',
+    example: 'Wire up login', minLength: 1, pattern: SINGLE_LINE, patternHint: 'must be one line', refine: noOuterSpace,
+  }),
+  description: T.String({
+    doc: 'Markdown body (bold, italics, lists, checklists, quotes, code). Stored in the file inside a ```md fence under the metadata, so headings and lists in it never clash with the board structure. The serializer lengthens the fence if the text itself contains ``` lines. Empty string = no fence written.',
+    example: 'Hook the form up to **/api/session**.\n\n- [ ] happy path\n- [x] error states',
+  }),
+  owner: OwnerName,
+  tags: T.Array(Tag, { unique: true, doc: 'Categories for filtering; order is kept as entered.' }),
+  history: T.Array(HistoryEntry, { minItems: 1, doc: 'Append-only arrival log, oldest first.' }),
+}, { doc: 'A card on the board.' });
+
+const Column = T.Object({
+  id: T.String({
+    doc: 'Session-local identity for drag targets and drafts. Not written to markdown; re-derived from position (c1, c2, ...) on parse.',
+    example: 'c2', pattern: /^c\d+$/, patternHint: 'must look like c1, c2, ...',
+  }),
+  name: T.String({
+    doc: 'Heading shown above the column and the "## " line in markdown. Duplicates are allowed but make history ambiguous.',
+    example: 'Doing', minLength: 1, pattern: SINGLE_LINE, patternHint: 'must be one line', refine: noOuterSpace,
+  }),
+  tasks: T.Array(Task, { doc: 'Cards in display order, top to bottom.' }),
+}, { doc: 'A swimlane; column order is board.columns order.' });
+
+/**
+ * Board-level settings, written as YAML-style front matter at the top of the file:
+ *   ---
+ *   theme: ocean
+ *   ocean.swell: 0.6
+ *   effects.complete: fireworks
+ *   ---
+ * The block is optional and lists only values that differ from the defaults; anything absent means "default".
+ * In memory every value is present, so the UI never has to ask "is this set?".
+ */
+const Settings = T.Object({
+  theme: T.String({
+    doc: 'Id of the active style (see THEMES). Written as "theme: <id>".',
+    example: 'ocean', refine: (v, path) => { if (!THEMES.some((t) => t.id === v)) fail(`${path}: unknown theme "${v}" (expected ${THEMES.map((t) => t.id).join(', ')})`); },
+  }),
+  themes: T.Custom({
+    doc: 'Every style\'s settings, keyed by theme id then setting key. Lets you switch styles without losing tweaks. Written as "<theme>.<setting>: value" lines, non-defaults only.',
+    example: { ocean: { swell: 0.6 } },
+    validate: (v, path) => {
+      if (v === null || typeof v !== 'object') fail(`${path}: expected an object`);
+      for (const id of Object.keys(v)) if (!THEMES.some((t) => t.id === id)) fail(`${path}: unknown theme "${id}"`);
+      for (const t of THEMES) {
+        const s = v[t.id];
+        if (s === undefined) fail(`${path}: missing settings for "${t.id}"`);
+        for (const k of Object.keys(s)) if (!(k in t.settings)) fail(`${path}.${t.id}: unknown setting "${k}"`);
+        for (const [k, def] of Object.entries(t.settings)) {
+          if (!(k in s)) fail(`${path}.${t.id}: missing "${k}"`);
+          if (coerceSetting(def, s[k]) !== s[k]) fail(`${path}.${t.id}.${k}: wrong type`);
+        }
+      }
+    },
+  }),
+  effects: T.Custom({
+    doc: 'Effect choice per event (create, delete, complete): one of that event\'s effects, "random" or "none". Written as "effects.<event>: value".',
+    example: { create: 'pop', delete: 'burn', complete: 'random' },
+    validate: (v, path) => {
+      if (v === null || typeof v !== 'object') fail(`${path}: expected an object`);
+      for (const k of Object.keys(v)) if (!(k in EVENT_EFFECTS)) fail(`${path}: unknown event "${k}"`);
+      for (const event of Object.keys(EVENT_EFFECTS)) {
+        if (!(event in v)) fail(`${path}: missing "${event}"`);
+        if (!effectChoices(event).includes(v[event])) fail(`${path}.${event}: "${v[event]}" is not one of ${effectChoices(event).join(', ')}`);
+      }
+    },
+  }),
+}, { doc: 'Look and feel that travels with the board file.' });
+
+const DEFAULT_THEME = 'minimal';
+function defaultBoardSettings() {
+  return {
+    theme: DEFAULT_THEME,
+    themes: Object.fromEntries(THEMES.map((t) => [t.id, defaultSettings(t)])),
+    effects: Object.fromEntries(Object.entries(EVENT_EFFECTS).map(([event, spec]) => [event, spec.default])),
+  };
+}
+
+const Board = T.Object({
+  title: T.String({
+    doc: 'Board name; the single "# " line at the top of the markdown.',
+    example: 'Sprint 42', minLength: 1, pattern: SINGLE_LINE, patternHint: 'must be one line', refine: noOuterSpace,
+  }),
+  settings: Settings,
+  columns: T.Array(Column, { doc: 'Columns left to right.' }),
+  archive: T.Array(Task, {
+    doc: 'Completed tasks, oldest first. Hidden from the board, shown in the Archive view. Written last as "## Archive <!-- archive -->" with tasks in the usual format.',
+  }),
+}, { doc: 'The whole board. The markdown file is the canonical form; this is its parsed shape.' });
+
+function validateBoard(board) {
+  check(Board, board, 'board');
+  const seenTasks = new Set();
+  const seenCols = new Set();
+  for (const col of board.columns) {
+    if (seenCols.has(col.id)) fail(`board: duplicate column id "${col.id}"`);
+    seenCols.add(col.id);
+  }
+  for (const t of [...board.columns.flatMap((c) => c.tasks), ...board.archive]) {
+    if (seenTasks.has(t.id)) fail(`board: task id "${t.id}" is used twice`);
+    seenTasks.add(t.id);
+  }
+  return board;
+}
+
+/* ---------- (2) Markdown <-> Board ---------- */
+
+const META_KEYS = ['id', 'owner', 'tags', 'history'];
+
+/** Front matter lines -> full settings. `lines` are the lines between the "---" markers; `first` is the 0-based line of the first. */
+function parseSettings(lines, first) {
+  const settings = defaultBoardSettings();
+  const seen = new Map();
+  lines.forEach((raw, k) => {
+    const i = first + k;
+    const line = raw.trim();
+    if (line === '' || line.startsWith('#')) return;
+    const m = /^([a-z][a-z0-9-]*(?:\.[a-z][a-zA-Z0-9-]*)?):\s*(.*)$/.exec(line);
+    if (m === null) fail(`Line ${i + 1}: front matter lines look like "theme: ocean" or "ocean.swell: 0.6"`);
+    const [, key, value] = m;
+    if (seen.has(key)) fail(`Line ${i + 1}: "${key}" is already set on line ${seen.get(key) + 1}`);
+    seen.set(key, i);
+    const where = (msg) => fail(`Line ${i + 1}: ${msg}`);
+    if (key === 'theme') {
+      if (!THEMES.some((t) => t.id === value)) where(`unknown theme "${value}" (expected ${THEMES.map((t) => t.id).join(', ')})`);
+      settings.theme = value;
+      return;
+    }
+    const [scope, name] = key.split('.');
+    if (name === undefined) where(`unknown setting "${key}" (expected theme, effects.<event> or <theme>.<setting>)`);
+    if (scope === 'effects') {
+      if (!(name in EVENT_EFFECTS)) where(`unknown effect event "${name}" (expected ${Object.keys(EVENT_EFFECTS).join(', ')})`);
+      if (!effectChoices(name).includes(value)) where(`"${value}" is not an effect for ${name} (expected ${effectChoices(name).join(', ')})`);
+      settings.effects[name] = value;
+      return;
+    }
+    const theme = THEMES.find((t) => t.id === scope);
+    if (theme === undefined) where(`unknown theme "${scope}" in "${key}"`);
+    const def = theme.settings[name];
+    if (def === undefined) where(`"${theme.name}" has no setting "${name}" (expected ${Object.keys(theme.settings).join(', ')})`);
+    let typed = value;
+    if (def.type === 'boolean') {
+      if (value !== 'true' && value !== 'false') where(`${key} must be true or false`);
+      typed = value === 'true';
+    }
+    try { settings.themes[theme.id][name] = coerceSetting(def, typed); } catch (err) { where(`${key}: ${err.message}`); }
+  });
+  return settings;
+}
+
+function serializeSettings(settings) {
+  const defaults = defaultBoardSettings();
+  const out = [];
+  if (settings.theme !== defaults.theme) out.push(`theme: ${settings.theme}`);
+  for (const t of THEMES) {
+    for (const k of Object.keys(t.settings)) {
+      const v = settings.themes[t.id][k];
+      if (v !== defaults.themes[t.id][k]) out.push(`${t.id}.${k}: ${String(v)}`);
+    }
+  }
+  for (const event of Object.keys(EVENT_EFFECTS)) if (settings.effects[event] !== defaults.effects[event]) out.push(`effects.${event}: ${settings.effects[event]}`);
+  return out;
+}
+
+function parseBoard(src) {
+  if (typeof src !== 'string') bug('parseBoard needs a string');
+  const lines = src.replace(/\r\n?/g, '\n').split('\n');
+  let settings = defaultBoardSettings();
+  let bodyStart = 0;
+  if (lines[0] === '---') {
+    const close = lines.indexOf('---', 1);
+    if (close < 0) fail('Line 1: front matter opened with "---" is never closed with another "---" line');
+    settings = parseSettings(lines.slice(1, close), 1);
+    bodyStart = close + 1;
+  }
+  let title = null;
+  const columns = [];
+  let archive = null; // the archive section, once its heading is seen
+  let col = null;
+  let task = null; // { line, title, meta: {}, history: null | [], desc: null | [], fenceLine, fenceLen }
+  let phase = 'none'; // 'none' | 'meta' | 'history' | 'gap' | 'fence'
+  const idLines = new Map();
+  const at = (i, msg) => fail(`Line ${i + 1}: ${msg}`);
+
+  const finishTask = () => {
+    if (task === null) return;
+    const where = `Line ${task.line + 1} (task "${task.title}")`;
+    for (const key of ['id', 'owner', 'tags']) if (!(key in task.meta)) fail(`${where}: missing "- ${key}:" line`);
+    if (task.history === null) fail(`${where}: missing "- history:" with at least one "  - Column @ timestamp" entry`);
+    const built = {
+      id: task.meta.id,
+      title: task.title,
+      description: task.desc === null ? '' : task.desc.join('\n').replace(/^\n+/, '').replace(/\s+$/, ''),
+      owner: task.meta.owner,
+      tags: task.meta.tags === '' ? [] : task.meta.tags.split(',').map((s) => s.trim()),
+      history: task.history,
+    };
+    check(Task, built, where);
+    if (idLines.has(built.id)) fail(`${where}: id "${built.id}" is already used on line ${idLines.get(built.id) + 1}`);
+    idLines.set(built.id, task.line);
+    col.tasks.push(built);
+    task = null;
+    phase = 'none';
+  };
+
+  lines.forEach((raw, i) => {
+    if (i < bodyStart) return;
+    const line = raw.replace(/\s+$/, '');
+    let m;
+    if (phase === 'fence') {
+      // Inside the description fence everything is description, including "#" lines.
+      if ((m = /^(`{3,})$/.exec(line)) !== null && m[1].length >= task.fenceLen) { phase = 'gap'; return; }
+      task.desc.push(line);
+      return;
+    }
+    if (line === '---') at(i, 'front matter ("---" block) must start on the very first line');
+    if ((m = /^# (.*)$/.exec(line)) !== null) {
+      if (title !== null) at(i, 'only one "# Board title" line is allowed');
+      if (columns.length > 0) at(i, '"# Board title" must come before the first column');
+      title = m[1].trim();
+      if (title === '') at(i, 'board title is empty');
+      return;
+    }
+    if ((m = /^## (.*)$/.exec(line)) !== null) {
+      finishTask();
+      if (title === null) at(i, 'expected "# Board title" before the first column');
+      if (archive !== null) at(i, 'the "## Archive <!-- archive -->" section must be the last section');
+      if (/<!--\s*archive\s*-->$/.test(m[1])) {
+        archive = { id: null, name: 'Archive', tasks: [] };
+        col = archive;
+        return;
+      }
+      const name = m[1].trim();
+      if (name === '') at(i, 'column name is empty');
+      if (/<!--/.test(name)) at(i, `column headings are plain names; remove the "<!-- … -->" comment from "${name}"`);
+      col = { id: `c${columns.length + 1}`, name, tasks: [] };
+      columns.push(col);
+      return;
+    }
+    if ((m = /^### (.*)$/.exec(line)) !== null) {
+      finishTask();
+      if (col === null) at(i, 'task appears before any "## Column"');
+      const t = m[1].trim();
+      if (t === '') at(i, 'task title is empty');
+      task = { line: i, title: t, meta: {}, history: null, desc: null, fenceLine: -1, fenceLen: 0 };
+      phase = 'meta';
+      return;
+    }
+    if (/^#{1,3}$/.test(line)) at(i, 'heading marker with no text');
+    if (task === null) {
+      if (line.trim() === '') return;
+      if (title === null) at(i, 'expected "# Board title" as the first line (after any front matter)');
+      if (col === null) at(i, 'only blank lines may sit between the board title and the first "## Column"');
+      at(i, 'text inside a column must belong to a "### Task"');
+    }
+    if (phase === 'gap') {
+      if (line.trim() === '') return;
+      if ((m = /^(`{3,})\s*(md|markdown)?$/.exec(line)) !== null) {
+        if (task.desc !== null) at(i, `task "${task.title}" already has a description block (line ${task.fenceLine + 1})`);
+        task.desc = [];
+        task.fenceLine = i;
+        task.fenceLen = m[1].length;
+        phase = 'fence';
+        return;
+      }
+      if (/^`{3,}/.test(line)) at(i, 'description fences open with ``` or ```md');
+      at(i, 'task descriptions go inside a fence: a "```md" line, the text, then a "```" line');
+    }
+    if (phase === 'meta' || phase === 'history') {
+      if (line.trim() === '') { phase = 'gap'; return; }
+      if (phase === 'history' && /^\s+- /.test(line)) {
+        const h = /^\s+- (.+?) @ (\S+)(?: by (.+))?$/.exec(line);
+        if (h === null) at(i, 'history entries look like "  - Doing @ 2026-10-27T10:02:00Z by Aaron" ("by …" is left off when unassigned)');
+        task.history.push({ column: h[1].trim(), at: h[2], owner: h[3] === undefined ? '' : h[3].trim() });
+        return;
+      }
+      if ((m = /^- ([a-z]+):(?: (.*))?$/.exec(line)) !== null) {
+        const key = m[1];
+        const val = (m[2] === undefined ? '' : m[2]).trim();
+        if (!META_KEYS.includes(key)) at(i, `unknown field "${key}" (expected ${META_KEYS.join(', ')})`);
+        if (key === 'history') {
+          if (task.history !== null) at(i, 'duplicate "- history:"');
+          if (val !== '') at(i, 'put history entries on the indented lines below "- history:"');
+          task.history = [];
+          phase = 'history';
+          return;
+        }
+        if (key in task.meta) at(i, `duplicate "- ${key}:"`);
+        task.meta[key] = val;
+        phase = 'meta';
+        return;
+      }
+      at(i, 'expected "- key: value" metadata, or a blank line before the description');
+    }
+    bug(`parser reached phase "${phase}" on line ${i + 1}`);
+  });
+  if (phase === 'fence') fail(`Line ${task.fenceLine + 1}: description fence for "${task.title}" is never closed with a ${'`'.repeat(task.fenceLen)} line`);
+  finishTask();
+  if (title === null) fail(`Line ${bodyStart + 1}: expected "# Board title"`);
+  return validateBoard({ title, settings, columns, archive: archive === null ? [] : archive.tasks });
+}
+
+function serializeTask(t) {
+  const out = [`### ${t.title}`, `- id: ${t.id}`, t.owner === '' ? '- owner:' : `- owner: ${t.owner}`, t.tags.length === 0 ? '- tags:' : `- tags: ${t.tags.join(', ')}`, '- history:'];
+  for (const h of t.history) out.push(`  - ${h.column} @ ${h.at}${h.owner === '' ? '' : ` by ${h.owner}`}`);
+  const desc = t.description.replace(/^\n+/, '').replace(/\s+$/, '');
+  if (desc !== '') {
+    const body = desc.split('\n').map((l) => l.replace(/\s+$/, ''));
+    const longest = body.reduce((n, l) => { const m = /^(`{3,})/.exec(l); return m === null ? n : Math.max(n, m[1].length); }, 0);
+    const fence = '`'.repeat(Math.max(3, longest + 1));
+    out.push('', `${fence}md`, ...body, fence);
+  }
+  out.push('');
+  return out;
+}
+
+function serializeBoard(board) {
+  validateBoard(board);
+  const front = serializeSettings(board.settings);
+  const out = front.length === 0 ? [] : ['---', ...front, '---'];
+  out.push(`# ${board.title}`, '');
+  for (const col of board.columns) {
+    out.push(`## ${col.name}`, '');
+    for (const t of col.tasks) out.push(...serializeTask(t));
+  }
+  if (board.archive.length > 0) {
+    out.push('## Archive <!-- archive -->', '');
+    for (const t of board.archive) out.push(...serializeTask(t));
+  }
+  return out.join('\n').replace(/\n+$/, '\n');
+}
+
+/* ---------- (3) Pure board operations (time is always passed in) ---------- */
+
+/** Where a task lives: `col` is its column, or null when it is in the archive. */
+function findTask(board, taskId) {
+  for (const col of board.columns) {
+    const index = col.tasks.findIndex((t) => t.id === taskId);
+    if (index >= 0) return { col, index, task: col.tasks[index], archived: false };
+  }
+  const index = board.archive.findIndex((t) => t.id === taskId);
+  if (index >= 0) return { col: null, index, task: board.archive[index], archived: true };
+  return fail(`No task with id "${taskId}"`);
+}
+function findColumn(board, colId) {
+  const col = board.columns.find((c) => c.id === colId);
+  return col === undefined ? fail(`No column with id "${colId}"`) : col;
+}
+const allTasks = (board) => [...board.columns.flatMap((c) => c.tasks), ...board.archive];
+function nextNumbered(ids, re, make) {
+  const max = ids.reduce((acc, id) => { const m = re.exec(id); return m === null ? acc : Math.max(acc, Number(m[1])); }, 0);
+  return make(max + 1);
+}
+function nextTaskId(board) {
+  return nextNumbered(allTasks(board).map((t) => t.id), /^t-(\d+)$/, (n) => `t-${String(n).padStart(2, '0')}`);
+}
+function nextColumnId(board) {
+  return nextNumbered(board.columns.map((c) => c.id), /^c(\d+)$/, (n) => `c${n}`);
+}
+const withColumns = (board, columns) => validateBoard({ ...board, columns });
+/** Replace one task wherever it lives (column or archive). */
+function mapTask(board, taskId, f) {
+  findTask(board, taskId);
+  const swap = (t) => (t.id === taskId ? f(t) : t);
+  return validateBoard({ ...board, columns: board.columns.map((c) => ({ ...c, tasks: c.tasks.map(swap) })), archive: board.archive.map(swap) });
+}
+/** Where a history entry made now would say the task is. */
+const placeOf = (found) => ({ column: found.col === null ? 'Archive' : found.col.name });
+
+function setBoardTitle(board, title) { return validateBoard({ ...board, title }); }
+
+function addTask(board, colId, title, at) {
+  const col = findColumn(board, colId);
+  const id = nextTaskId(board);
+  const task = { id, title, description: '', owner: '', tags: [], history: [{ column: col.name, at, owner: '' }] };
+  return { board: withColumns(board, board.columns.map((c) => (c.id === colId ? { ...c, tasks: [...c.tasks, task] } : c))), id };
+}
+
+/** Owner goes through reassignTask so each handover is recorded; the other fields are plain edits. */
+const EDITABLE_TASK_FIELDS = ['title', 'description', 'tags'];
+function updateTask(board, taskId, patch) {
+  for (const key of Object.keys(patch)) if (!EDITABLE_TASK_FIELDS.includes(key)) bug(`updateTask can't change "${key}"`);
+  return mapTask(board, taskId, (t) => ({ ...t, ...patch }));
+}
+
+/** Change the owner and log it as a history entry in the task's current place. Same owner = unchanged board. */
+function reassignTask(board, taskId, owner, at) {
+  const found = findTask(board, taskId);
+  if (found.task.owner === owner) return board;
+  return mapTask(board, taskId, (t) => ({ ...t, owner, history: [...t.history, { ...placeOf(found), at, owner }] }));
+}
+
+function deleteTask(board, taskId) {
+  findTask(board, taskId);
+  return validateBoard({ ...board, columns: board.columns.map((c) => ({ ...c, tasks: c.tasks.filter((t) => t.id !== taskId) })), archive: board.archive.filter((t) => t.id !== taskId) });
+}
+
+/** Move a task before `beforeId` in `toColId` (null = append). Crossing columns appends a history entry at `at`. */
+function moveTask(board, taskId, toColId, beforeId, at) {
+  if (beforeId === taskId) bug('a task cannot be placed before itself');
+  const { col: from, task } = findTask(board, taskId);
+  if (from === null) bug('moveTask on an archived task; use restoreTask');
+  const to = findColumn(board, toColId);
+  const moved = from.id === to.id ? task : { ...task, history: [...task.history, { column: to.name, at, owner: task.owner }] };
+  return withColumns(board, board.columns.map((c) => {
+    const rest = c.tasks.filter((t) => t.id !== taskId);
+    if (c.id !== to.id) return rest.length === c.tasks.length ? c : { ...c, tasks: rest };
+    const idx = beforeId === null ? rest.length : rest.findIndex((t) => t.id === beforeId);
+    if (idx < 0) fail(`No task "${beforeId}" in column "${to.name}"`);
+    return { ...c, tasks: [...rest.slice(0, idx), moved, ...rest.slice(idx)] };
+  }));
+}
+
+/** Completing = moving the task into the hidden archive, logged as a history entry named "Archive". */
+function archiveTask(board, taskId, at) {
+  const { col, task } = findTask(board, taskId);
+  if (col === null) fail(`"${task.title}" is already archived`);
+  const archived = { ...task, history: [...task.history, { column: 'Archive', at, owner: task.owner }] };
+  return validateBoard({ ...board, columns: board.columns.map((c) => (c.id === col.id ? { ...c, tasks: c.tasks.filter((t) => t.id !== taskId) } : c)), archive: [...board.archive, archived] });
+}
+
+/** Bring an archived task back to the end of `colId`. */
+function restoreTask(board, taskId, colId, at) {
+  const { col: from, task } = findTask(board, taskId);
+  if (from !== null) fail(`"${task.title}" isn't archived`);
+  const to = findColumn(board, colId);
+  const restored = { ...task, history: [...task.history, { column: to.name, at, owner: task.owner }] };
+  return validateBoard({ ...board, columns: board.columns.map((c) => (c.id === to.id ? { ...c, tasks: [...c.tasks, restored] } : c)), archive: board.archive.filter((t) => t.id !== taskId) });
+}
+
+/* Settings operations: the markdown header is the single home for these. */
+const withSettings = (board, settings) => validateBoard({ ...board, settings });
+function setTheme(board, themeId) { themeById(themeId); return withSettings(board, { ...board.settings, theme: themeId }); }
+function setThemeSetting(board, themeId, key, raw) {
+  const theme = themeById(themeId);
+  const def = theme.settings[key] ?? bug(`theme "${themeId}" has no setting "${key}"`);
+  const value = coerceSetting(def, raw);
+  return withSettings(board, { ...board.settings, themes: { ...board.settings.themes, [themeId]: { ...board.settings.themes[themeId], [key]: value } } });
+}
+function resetThemeSettings(board, themeId) {
+  return withSettings(board, { ...board.settings, themes: { ...board.settings.themes, [themeId]: defaultSettings(themeById(themeId)) } });
+}
+function setEffect(board, event, choice) {
+  if (!effectChoices(event).includes(choice)) bug(`"${choice}" is not an effect for ${event}`);
+  return withSettings(board, { ...board.settings, effects: { ...board.settings.effects, [event]: choice } });
+}
+
+function addColumn(board, name) {
+  const id = nextColumnId(board);
+  return { board: withColumns(board, [...board.columns, { id, name, tasks: [] }]), id };
+}
+function renameColumn(board, colId, name) {
+  findColumn(board, colId);
+  return withColumns(board, board.columns.map((c) => (c.id === colId ? { ...c, name } : c)));
+}
+function moveColumn(board, colId, beforeColId) {
+  if (beforeColId === colId) bug('a column cannot be placed before itself');
+  const col = findColumn(board, colId);
+  const rest = board.columns.filter((c) => c.id !== colId);
+  const idx = beforeColId === null ? rest.length : rest.findIndex((c) => c.id === beforeColId);
+  if (idx < 0) fail(`No column "${beforeColId}"`);
+  return withColumns(board, [...rest.slice(0, idx), col, ...rest.slice(idx)]);
+}
+function deleteColumn(board, colId) {
+  const col = findColumn(board, colId);
+  if (col.tasks.length > 0) fail(`Column "${col.name}" still has ${col.tasks.length} task(s). Move or delete them first.`);
+  return withColumns(board, board.columns.filter((c) => c.id !== colId));
+}
+
+/** Filter = { query: string, tags: string[], owners: string[] ('' = unassigned) }. Tags match any-of. */
+function taskMatches(task, filter) {
+  const words = filter.query.trim().toLowerCase().split(/\s+/).filter((w) => w !== '');
+  if (words.length > 0) {
+    const hay = [task.title, task.description, task.owner, ...task.tags].join('\n').toLowerCase();
+    if (!words.every((w) => hay.includes(w))) return false;
+  }
+  if (filter.tags.length > 0 && !filter.tags.some((t) => task.tags.includes(t))) return false;
+  if (filter.owners.length > 0 && !filter.owners.includes(task.owner)) return false;
+  return true;
+}
+
+const normalizeOwner = (raw) => raw.trim().replace(/\s+/g, ' ');
+
+function hashString(s) {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+}
+const hueOf = (s) => hashString(s) % 360;
+const initialsOf = (name) => name.split(/\s+/).filter((w) => w !== '').slice(0, 2).map((w) => w[0].toUpperCase()).join('');
+
+function formatDuration(ms) {
+  if (ms < 0) return 'clock went backwards';
+  if (ms < 60000) return '<1m';
+  const min = Math.round(ms / 60000);
+  if (min < 60) return `${min}m`;
+  const h = Math.floor(min / 60);
+  if (h < 48) return `${h}h ${min % 60}m`;
+  const d = Math.floor(h / 24);
+  return `${d}d ${h % 24}h`;
+}
+const STAMP_FORMAT = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' });
+const formatStamp = (iso) => `${STAMP_FORMAT.format(new Date(iso))} UTC`;
+
+/** `nowMs` is passed in (the UI ticks it), so the open-ended last stay is measured without reading the clock here. */
+function historyView(task, nowMs) {
+  return task.history.map((h, i) => {
+    const next = task.history[i + 1];
+    const end = next === undefined ? nowMs : Date.parse(next.at);
+    const dur = formatDuration(end - Date.parse(h.at));
+    const prev = task.history[i - 1];
+    const reassigned = prev !== undefined && prev.column === h.column && prev.owner !== h.owner;
+    return {
+      column: h.column,
+      title: reassigned ? `Reassigned to ${h.owner === '' ? 'nobody' : h.owner}` : h.column,
+      label: i === 0 ? `Created ${formatStamp(h.at)}` : formatStamp(h.at),
+      owner: h.owner === '' ? 'Unassigned' : h.owner,
+      duration: next === undefined ? `${dur} so far` : `${dur} here`,
+    };
+  });
+}
+
+/** Total time per column name, summed over every stay (the current one runs to nowMs), in order of first visit. */
+function historySummary(task, nowMs) {
+  const totals = new Map();
+  task.history.forEach((h, i) => {
+    const next = task.history[i + 1];
+    const end = next === undefined ? nowMs : Date.parse(next.at);
+    totals.set(h.column, (totals.get(h.column) ?? 0) + Math.max(0, end - Date.parse(h.at)));
+  });
+  return [...totals].map(([column, ms]) => ({ column, duration: formatDuration(ms) }));
+}
+
+/* ---------- (3b) Description markdown: a small, safe renderer (no HTML, data only) ---------- */
+
+const MD_LIST = /^(\s*)([-*+]|\d+[.)])\s+(?:\[( |x|X)\]\s+)?(.*)$/;
+const MD_FENCE = /^\s*(`{3,}|~{3,})/;
+const MD_HEADING = /^(#{1,6})\s+(.*)$/;
+const MD_RULE = /^\s{0,3}([-*_])(\s*\1){2,}\s*$/;
+const MD_QUOTE = /^\s*>/;
+const isMdBlockStart = (l) => MD_FENCE.test(l) || MD_HEADING.test(l) || MD_RULE.test(l) || MD_QUOTE.test(l) || MD_LIST.test(l);
+
+/**
+ * Block = { type: 'para'|'heading'|'quote'|'code'|'rule'|'list', text?, level?,
+ *           items?: [{ indent, marker, check: null|boolean, text, line }] }.
+ * `line` is the item's 0-based line in `text`, so a checkbox click can flip exactly that line.
+ */
+function parseMarkdown(text) {
+  const lines = text.split('\n');
+  const blocks = [];
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    let m;
+    if (line.trim() === '') { i++; continue; }
+    if ((m = MD_FENCE.exec(line)) !== null) {
+      const close = new RegExp(`^\\s*\\${m[1][0]}{${m[1].length},}\\s*$`);
+      const body = [];
+      i++;
+      while (i < lines.length && !close.test(lines[i])) { body.push(lines[i]); i++; }
+      i++;
+      blocks.push({ type: 'code', text: body.join('\n') });
+      continue;
+    }
+    if ((m = MD_HEADING.exec(line)) !== null) { blocks.push({ type: 'heading', level: m[1].length, text: m[2].replace(/\s+#+\s*$/, '') }); i++; continue; }
+    if (MD_RULE.test(line)) { blocks.push({ type: 'rule' }); i++; continue; }
+    if (MD_QUOTE.test(line)) {
+      const body = [];
+      while (i < lines.length && MD_QUOTE.test(lines[i])) { body.push(lines[i].replace(/^\s*>\s?/, '')); i++; }
+      blocks.push({ type: 'quote', text: body.join('\n') });
+      continue;
+    }
+    if (MD_LIST.test(line)) {
+      const items = [];
+      while (i < lines.length) {
+        const lm = MD_LIST.exec(lines[i]);
+        if (lm !== null) {
+          items.push({ indent: lm[1].replace(/\t/g, '  ').length, marker: lm[2], check: lm[3] === undefined ? null : lm[3] !== ' ', text: lm[4], line: i });
+          i++;
+          continue;
+        }
+        if (lines[i].trim() !== '' && /^\s+/.test(lines[i])) { items[items.length - 1].text += `\n${lines[i].trim()}`; i++; continue; }
+        break;
+      }
+      blocks.push({ type: 'list', items });
+      continue;
+    }
+    const body = [];
+    while (i < lines.length && lines[i].trim() !== '' && (body.length === 0 || !isMdBlockStart(lines[i]))) { body.push(lines[i]); i++; }
+    blocks.push({ type: 'para', text: body.join('\n') });
+  }
+  return blocks;
+}
+
+const safeHref = (url) => (/^(https?:\/\/|mailto:)/i.test(url) ? url : null);
+
+/** Inline markdown -> flat spans { text, bold, italic, strike, code, href }. Escapes with backslash. */
+function parseInline(text, flags) {
+  const base = flags ?? { bold: false, italic: false, strike: false, code: false, href: null };
+  const out = [];
+  let buf = '';
+  let i = 0;
+  const flush = () => { if (buf !== '') { out.push({ ...base, text: buf }); buf = ''; } };
+  while (i < text.length) {
+    const rest = text.slice(i);
+    const prev = i === 0 ? '' : text[i - 1];
+    let m;
+    if (rest[0] === '\\' && rest.length > 1 && /[\\`*_~[\]()#>!-]/.test(rest[1])) { buf += rest[1]; i += 2; continue; }
+    if ((m = /^`([^`]+)`/.exec(rest)) !== null) { flush(); out.push({ ...base, code: true, text: m[1] }); i += m[0].length; continue; }
+    if ((m = /^\[([^\]]+)\]\(([^)\s]+)\)/.exec(rest)) !== null) {
+      flush();
+      out.push(...parseInline(m[1], { ...base, href: safeHref(m[2]) }));
+      i += m[0].length;
+      continue;
+    }
+    if ((m = /^\*\*\*(?=\S)([\s\S]*?\S)\*\*\*/.exec(rest)) !== null) { flush(); out.push(...parseInline(m[1], { ...base, bold: true, italic: true })); i += m[0].length; continue; }
+    if ((m = /^(\*\*|__)(?=\S)([\s\S]*?\S)\1(?![*_])/.exec(rest)) !== null && !(m[1] === '__' && /\w/.test(prev))) { flush(); out.push(...parseInline(m[2], { ...base, bold: true })); i += m[0].length; continue; }
+    if ((m = /^~~(?=\S)([\s\S]*?\S)~~/.exec(rest)) !== null) { flush(); out.push(...parseInline(m[1], { ...base, strike: true })); i += m[0].length; continue; }
+    if ((m = /^(\*|_)(?=\S)([\s\S]*?\S)\1(?!\1)/.exec(rest)) !== null && !(m[1] === '_' && /\w/.test(prev))) { flush(); out.push(...parseInline(m[2], { ...base, italic: true })); i += m[0].length; continue; }
+    buf += rest[0];
+    i++;
+  }
+  flush();
+  return out;
+}
+
+/** Render-ready view of description markdown. `opts.links`: real anchors; `opts.onToggle(line)`: checkbox handler. */
+function markdownView(text, opts) {
+  const spans = (s) => parseInline(s).map((sp) => {
+    const cls = ['md-span', sp.bold ? 'md-b' : '', sp.italic ? 'md-i' : '', sp.strike ? 'md-s' : '', sp.code ? 'md-code' : '', sp.href !== null ? 'md-a' : ''].filter((c) => c !== '').join(' ');
+    const isLink = opts.links && sp.href !== null;
+    return { text: sp.text, cls, isLink, isPlain: !isLink, href: sp.href ?? '' };
+  });
+  return parseMarkdown(text).map((b) => ({
+    isPara: b.type === 'para', isHeading: b.type === 'heading', isQuote: b.type === 'quote', isCode: b.type === 'code', isRule: b.type === 'rule', isList: b.type === 'list',
+    spans: b.type === 'para' || b.type === 'heading' || b.type === 'quote' ? spans(b.text) : [],
+    text: b.type === 'code' ? b.text : '',
+    items: b.type !== 'list' ? [] : b.items.map((it) => {
+      const level = Math.min(Math.floor(it.indent / 2), 4);
+      return {
+        style: `padding-left: ${level * 16}px`,
+        isCheck: it.check !== null, isMarker: it.check === null, checked: it.check === true,
+        checkLabel: it.check === true ? 'Mark not done' : 'Mark done',
+        marker: /\d/.test(it.marker) ? it.marker.replace(')', '.') : level === 0 ? '•' : '◦',
+        bodyCls: it.check === true ? 'md-li-body md-done' : 'md-li-body',
+        spans: spans(it.text),
+        toggle: () => opts.onToggle(it.line),
+      };
+    }),
+  }));
+}
+
+function toggleCheckLine(text, line) {
+  const lines = text.split('\n');
+  if (line < 0 || line >= lines.length) bug(`checkbox line ${line} is outside the description`);
+  const m = /^(\s*(?:[-*+]|\d+[.)])\s+)\[( |x|X)\]/.exec(lines[line]);
+  if (m === null) bug(`line ${line} has no checkbox`);
+  lines[line] = `${m[1]}[${m[2] === ' ' ? 'x' : ' '}]${lines[line].slice(m[0].length)}`;
+  return lines.join('\n');
+}
+
+/* Editor formatting: pure (text, selection) -> (text, selection) transforms behind the toolbar and shortcuts. */
+
+const INLINE_MARKS = { bold: '**', italic: '*', strike: '~~', code: '`' };
+const LINE_FORMATS = {
+  heading: { re: /^#{1,6}\s+/, make: () => '### ' },
+  bullet: { re: /^(\s*)[-*+]\s+(?!\[[ xX]\]\s)/, make: (indent) => `${indent}- ` },
+  number: { re: /^(\s*)\d+[.)]\s+/, make: (indent, n) => `${indent}${n}. ` },
+  check: { re: /^(\s*)[-*+]\s+\[[ xX]\]\s+/, make: (indent) => `${indent}- [ ] ` },
+  quote: { re: /^>\s?/, make: () => '> ' },
+};
+const ANY_LINE_PREFIX = /^(\s*)(?:#{1,6}\s+|>\s?|[-*+]\s+\[[ xX]\]\s+|[-*+]\s+|\d+[.)]\s+)/;
+
+function applyFormat(text, start, end, kind) {
+  if (start > end) bug('selection start after end');
+  if (kind in INLINE_MARKS) {
+    const mark = INLINE_MARKS[kind];
+    let s = start;
+    let e = end;
+    while (s < e && /\s/.test(text[s])) s++;
+    while (e > s && /\s/.test(text[e - 1])) e--;
+    const n = mark.length;
+    const sel = text.slice(s, e);
+    const wrappedOutside = text.slice(s - n, s) === mark && text.slice(e, e + n) === mark
+      && !(kind === 'italic' && text[s - n - 1] === '*' && text[e + n] === '*' && text.slice(s - 3, s) !== '***');
+    if (wrappedOutside) return { text: text.slice(0, s - n) + sel + text.slice(e + n), start: s - n, end: e - n };
+    if (sel.length >= 2 * n && sel.startsWith(mark) && sel.endsWith(mark)) {
+      const inner = sel.slice(n, sel.length - n);
+      return { text: text.slice(0, s) + inner + text.slice(e), start: s, end: s + inner.length };
+    }
+    return { text: `${text.slice(0, s)}${mark}${sel}${mark}${text.slice(e)}`, start: s + n, end: e + n };
+  }
+  if (kind === 'link') {
+    const sel = text.slice(start, end);
+    if (sel === '') {
+      const ins = '[link text](https://)';
+      return { text: text.slice(0, start) + ins + text.slice(end), start: start + 1, end: start + 10 };
+    }
+    const ins = `[${sel}](https://)`;
+    const urlStart = start + sel.length + 3;
+    return { text: text.slice(0, start) + ins + text.slice(end), start: urlStart, end: urlStart + 8 };
+  }
+  const fmt = LINE_FORMATS[kind];
+  if (fmt === undefined) bug(`unknown format "${kind}"`);
+  const lineStart = text.lastIndexOf('\n', start - 1) + 1;
+  const endAt = end > start && text[end - 1] === '\n' ? end - 1 : end;
+  const nl = text.indexOf('\n', endAt);
+  const lineEnd = nl === -1 ? text.length : nl;
+  const lines = text.slice(lineStart, lineEnd).split('\n');
+  const content = lines.filter((l) => l.trim() !== '');
+  const allHave = content.length > 0 && content.every((l) => fmt.re.test(l));
+  let n = 0;
+  const next = lines.map((l) => {
+    if (allHave) return l.replace(fmt.re, (all, indent) => (kind === 'heading' || kind === 'quote' ? '' : indent ?? ''));
+    if (l.trim() === '' && lines.length > 1) return l;
+    const pm = ANY_LINE_PREFIX.exec(l);
+    const indent = pm === null ? (/^\s*/.exec(l)[0]) : pm[1];
+    const body = pm === null ? l.trimStart() : l.slice(pm[0].length);
+    n++;
+    return fmt.make(kind === 'heading' || kind === 'quote' ? '' : indent, n) + body;
+  });
+  const block = next.join('\n');
+  const single = lines.length === 1 && start === end;
+  const caret = lineStart + block.length;
+  return { text: text.slice(0, lineStart) + block + text.slice(lineEnd), start: single ? caret : lineStart, end: caret };
+}
+
+/** Enter inside a list or quote line: continue it, or end it when the item is empty. null = not a list line. */
+function continueList(text, start, end) {
+  if (start !== end) return null;
+  const lineStart = text.lastIndexOf('\n', start - 1) + 1;
+  const nl = text.indexOf('\n', start);
+  const line = text.slice(lineStart, nl === -1 ? text.length : nl);
+  const m = /^(\s*)(?:([-*+])|(\d+)([.)]))\s+(\[[ xX]\]\s+)?/.exec(line) ?? /^(>\s?)/.exec(line);
+  if (m === null) return null;
+  if (start < lineStart + m[0].length) return null;
+  if (line.slice(m[0].length).trim() === '') {
+    const t = text.slice(0, lineStart) + text.slice(lineStart + m[0].length);
+    return { text: t, start: lineStart, end: lineStart };
+  }
+  const prefix = m[0].startsWith('>') ? '> ' : `${m[1]}${m[2] !== undefined ? m[2] : `${Number(m[3]) + 1}${m[4]}`} ${m[5] !== undefined ? '[ ] ' : ''}`;
+  const ins = `\n${prefix}`;
+  return { text: text.slice(0, start) + ins + text.slice(end), start: start + ins.length, end: start + ins.length };
+}
+
+const FORMAT_BUTTONS = [
+  { kind: 'bold', label: 'Bold', keys: 'Ctrl/⌘ B', d: 'M7 5h6a3.5 3.5 0 0 1 0 7H7z M7 12h7a3.5 3.5 0 0 1 0 7H7z' },
+  { kind: 'italic', label: 'Italic', keys: 'Ctrl/⌘ I', d: 'M19 4h-9 M14 20H5 M15 4 9 20' },
+  { kind: 'strike', label: 'Strikethrough', keys: 'Ctrl/⌘ Shift X', d: 'M16 5H10a3 3 0 0 0-1 5.8 M14 12a3.5 3.5 0 0 1-1 7H7 M4 12h16' },
+  { kind: 'code', label: 'Inline code', keys: 'Ctrl/⌘ E', d: 'm16 18 6-6-6-6 M8 6l-6 6 6 6' },
+  { kind: 'link', label: 'Link', keys: 'Ctrl/⌘ K', d: 'M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7 M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7', sep: true },
+  { kind: 'heading', label: 'Heading', keys: '', d: 'M6 4v16 M18 4v16 M6 12h12' },
+  { kind: 'bullet', label: 'Bulleted list', keys: '', d: 'M9 6h12 M9 12h12 M9 18h12 M4 6h.01 M4 12h.01 M4 18h.01' },
+  { kind: 'number', label: 'Numbered list', keys: '', d: 'M10 6h11 M10 12h11 M10 18h11 M4 4h1v5 M4 9h2 M6 19H4c0-1.5 2-2 2-3.3 0-.8-.6-1.2-1.2-1.2-.6 0-1 .3-1.2.8' },
+  { kind: 'check', label: 'Checklist', keys: '', d: 'm3 6 2 2 3-3 M3 16l2 2 3-3 M12 7h9 M12 17h9' },
+  { kind: 'quote', label: 'Quote', keys: '', d: 'M4 5v14 M9 7h11 M9 12h11 M9 17h7' },
+];
+
+/* ---------- (4) Themes: registry of settings schemas + CSS variable mappers ---------- */
+
+const DENSITY = {
+  compact: { pad: '8px 10px', gap: '6px', colPad: '8px', title: '13px' },
+  comfortable: { pad: '12px', gap: '8px', colPad: '10px', title: '14px' },
+  roomy: { pad: '16px', gap: '12px', colPad: '12px', title: '15px' },
+};
+const BALL_PALETTES = {
+  candy: ['#ff5d73', '#ffb347', '#ffd93d', '#4cc9f0', '#7b6cf6', '#45d483'],
+  primary: ['#e63946', '#f4c430', '#1d4ed8', '#1b1b1b'],
+  sea: ['#0b6e99', '#14a3c7', '#7fd1e3', '#f2f2ea', '#f4a259'],
+  mono: ['#222222', '#555555', '#8a8a8a', '#c4c4c4'],
+};
+
+function hexToRgb(hex) {
+  const m = /^#([0-9a-f]{6})$/i.exec(hex);
+  if (m === null) fail(`"${hex}" is not a #rrggbb colour`);
+  const n = parseInt(m[1], 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+const rgba = (hex, a) => { const [r, g, b] = hexToRgb(hex); return `rgba(${r}, ${g}, ${b}, ${a})`; };
+const luminance = (hex) => {
+  const lin = hexToRgb(hex).map((c) => { const s = c / 255; return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4; });
+  return 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2];
+};
+const readableOn = (hex) => (luminance(hex) > 0.4 ? '#111111' : '#ffffff');
+
+const FONT_SANS = "'Geist', ui-sans-serif, system-ui, sans-serif";
+const FONT_MONO = "'Geist Mono', ui-monospace, Menlo, monospace";
+
+const BASE_VARS = {
+  '--font': FONT_SANS, '--font-title': FONT_SANS, '--mono': FONT_MONO,
+  '--glow': 'none', '--header-blur': 'none', '--card-blur': 'none',
+  '--col-w': '296px', '--col-gap': '14px', '--col-border': '1px solid transparent',
+  '--col-head-shadow': 'none', '--danger-bg': '#fde8e8', '--danger-fg': '#9b1c1c', '--tilt': '0', '--code-bg': 'rgba(127,127,127,.16)',
+};
+
+/**
+ * Theme = {
+ *   id: stable key (stored with the user's choice),
+ *   name / blurb: picker copy,
+ *   effect: null | 'ocean' | 'ballpit'  (which WebGL background to run),
+ *   settings: { key: Setting } where Setting = { type: 'color'|'range'|'select'|'boolean', label, default, doc, ...range/select extras },
+ *   vars(settings) -> CSS custom properties applied to the board root,
+ *   swatch(settings) -> 3 colours for the picker tile.
+ * }
+ * Add a style by appending to THEMES; nothing else needs to change.
+ */
+const THEMES = [
+  {
+    id: 'minimal', name: 'Minimal', blurb: 'Hairlines and type, no effects.', effect: null,
+    settings: {
+      accent: { type: 'color', label: 'Accent', default: '#2f5bea', doc: 'Selection, focus rings, active toggles.' },
+      dark: { type: 'boolean', label: 'Dark', default: false, doc: 'Near-black ground for low light.' },
+      radius: { type: 'range', label: 'Corners', min: 0, max: 16, step: 1, unit: 'px', default: 6, doc: 'Rounding of cards, columns and controls.' },
+      density: { type: 'select', label: 'Density', options: ['compact', 'comfortable', 'roomy'], default: 'comfortable', doc: 'Card padding and gaps.' },
+    },
+    vars: (s) => {
+      const d = DENSITY[s.density] ?? bug(`density "${s.density}"`);
+      const dark = s.dark;
+      return {
+        '--bg': dark ? '#111113' : '#fafaf9', '--fg': dark ? '#ececee' : '#18181b', '--muted': dark ? '#a1a1aa' : '#63636b',
+        '--line': dark ? '#2c2c31' : '#e4e4e7', '--surface': dark ? '#18181b' : '#f2f2f1', '--control': dark ? '#1c1c20' : '#ffffff',
+        '--card': dark ? '#202024' : '#ffffff', '--card-fg': dark ? '#ececee' : '#18181b', '--card-muted': dark ? '#a1a1aa' : '#5f5f67',
+        '--card-border': dark ? '#2c2c31' : '#e4e4e7', '--card-shadow': dark ? 'none' : '0 1px 0 rgba(0,0,0,.04)', '--card-shadow-hover': dark ? '0 0 0 1px #3a3a40' : '0 2px 8px rgba(0,0,0,.08)',
+        '--header-bg': dark ? '#111113' : '#fafaf9', '--panel': dark ? '#18181b' : '#ffffff', '--panel-fg': dark ? '#ececee' : '#18181b', '--panel-muted': dark ? '#a1a1aa' : '#63636b',
+        '--source-bg': dark ? '#141416' : '#ffffff', '--placeholder': 'transparent',
+        '--col-head-fg': dark ? '#ececee' : '#18181b',
+        '--accent': s.accent, '--accent-fg': readableOn(s.accent), '--radius': `${s.radius}px`,
+        '--pad': d.pad, '--gap': d.gap, '--col-pad': d.colPad, '--card-title-size': d.title,
+        '--tag-l': dark ? '0.36' : '0.93', '--tag-c': dark ? '0.06' : '0.045', '--tag-fg': dark ? '#ececee' : '#27272a',
+        ...(dark ? { '--danger-bg': '#3b1414', '--danger-fg': '#fca5a5' } : {}),
+      };
+    },
+    swatch: (s) => [s.dark ? '#111113' : '#fafaf9', s.dark ? '#202024' : '#ffffff', s.accent],
+  },
+  {
+    id: 'paper', name: 'Paper', blurb: 'Index cards on a warm desk.', effect: null,
+    settings: {
+      paper: { type: 'color', label: 'Desk', default: '#efe8dc', doc: 'Ground colour behind the columns.' },
+      ink: { type: 'color', label: 'Ink', default: '#2f4b8f', doc: 'Accent and selected states, like a fountain pen.' },
+      shadow: { type: 'range', label: 'Shadow', min: 0, max: 1, step: 0.05, default: 0.5, doc: 'How far the cards lift off the desk.' },
+      tilt: { type: 'range', label: 'Tilt', min: 0, max: 2, step: 0.1, unit: '°', default: 0.6, doc: 'Hand-placed rotation of cards.' },
+    },
+    vars: (s) => ({
+      '--bg': s.paper, '--fg': '#2b2622', '--muted': '#5f574e', '--line': 'rgba(60,45,30,.18)', '--surface': 'rgba(60,45,30,.045)',
+      '--control': '#fffdf8', '--card': '#fffdf7', '--card-fg': '#2b2622', '--card-muted': '#5f574e', '--card-border': 'rgba(60,45,30,.12)',
+      '--card-shadow': `0 1px 2px rgba(60,40,20,.10), 0 ${Math.round(2 + s.shadow * 10)}px ${Math.round(4 + s.shadow * 22)}px rgba(60,40,20,${(s.shadow * 0.2).toFixed(2)})`,
+      '--card-shadow-hover': `0 2px 4px rgba(60,40,20,.12), 0 ${Math.round(4 + s.shadow * 14)}px ${Math.round(8 + s.shadow * 28)}px rgba(60,40,20,${(s.shadow * 0.26).toFixed(2)})`,
+      '--header-bg': 'transparent', '--panel': '#fffdf8', '--panel-fg': '#2b2622', '--panel-muted': '#5f574e', '--source-bg': '#fffdf8', '--placeholder': 'rgba(47,75,143,.05)',
+      '--col-head-fg': '#2b2622', '--accent': s.ink, '--accent-fg': readableOn(s.ink), '--radius': '2px',
+      '--pad': '14px', '--gap': '12px', '--col-pad': '10px', '--card-title-size': '17px',
+      '--font-title': "'Newsreader', Georgia, 'Times New Roman', serif", '--tilt': String(s.tilt),
+      '--tag-l': '0.9', '--tag-c': '0.05', '--tag-fg': '#2b2622',
+    }),
+    swatch: (s) => [s.paper, '#fffdf7', s.ink],
+  },
+  {
+    id: 'terminal', name: 'Terminal', blurb: 'Phosphor on black, monospace.', effect: null,
+    settings: {
+      phosphor: { type: 'color', label: 'Phosphor', default: '#4cf08a', doc: 'Text and line colour.' },
+      glow: { type: 'range', label: 'Glow', min: 0, max: 1, step: 0.05, default: 0.4, doc: 'Bloom around text.' },
+      scanlines: { type: 'boolean', label: 'Scanlines', default: true, doc: 'CRT line overlay.' },
+    },
+    vars: (s) => {
+      const p = s.phosphor;
+      return {
+        '--bg': '#070907', '--fg': p, '--muted': rgba(p, 0.72), '--line': rgba(p, 0.32), '--surface': 'transparent', '--control': '#0b0f0b',
+        '--card': 'rgba(7,9,7,.85)', '--card-fg': p, '--card-muted': rgba(p, 0.72), '--card-border': rgba(p, 0.45), '--card-shadow': 'none', '--card-shadow-hover': `0 0 0 1px ${p}`,
+        '--header-bg': '#070907', '--panel': '#0a0d0a', '--panel-fg': p, '--panel-muted': rgba(p, 0.72), '--source-bg': '#070907', '--placeholder': rgba(p, 0.06),
+        '--col-head-fg': p, '--col-border': `1px dashed ${rgba(p, 0.25)}`, '--accent': p, '--accent-fg': '#070907', '--radius': '0px',
+        '--pad': '10px 12px', '--gap': '8px', '--col-pad': '10px', '--card-title-size': '13px',
+        '--font': "'JetBrains Mono', ui-monospace, Menlo, monospace", '--font-title': "'JetBrains Mono', ui-monospace, Menlo, monospace", '--mono': "'JetBrains Mono', ui-monospace, Menlo, monospace",
+        '--glow': s.glow > 0 ? `0 0 ${(s.glow * 8).toFixed(1)}px ${rgba(p, 0.7)}` : 'none',
+        '--tag-l': '0.2', '--tag-c': '0', '--tag-fg': p, '--danger-bg': '#2a0b0b', '--danger-fg': '#ff8a8a',
+      };
+    },
+    swatch: (s) => ['#070907', s.phosphor, rgba(s.phosphor, 0.4)],
+  },
+  {
+    id: 'ocean', name: 'Ocean', blurb: 'WebGL water; drag cards to make wakes.', effect: 'ocean',
+    settings: {
+      deep: { type: 'color', label: 'Deep water', default: '#06283d', doc: 'Colour in the troughs.' },
+      shallow: { type: 'color', label: 'Shallows', default: '#1f8fb3', doc: 'Colour on the crests and highlights.' },
+      swell: { type: 'range', label: 'Swell', min: 0, max: 1, step: 0.05, default: 0.45, doc: 'Height of the ambient waves.' },
+      wake: { type: 'range', label: 'Wake', min: 0, max: 2, step: 0.05, default: 1, doc: 'How hard a dragged card pushes the water.' },
+      damping: { type: 'range', label: 'Calm', min: 0.95, max: 0.998, step: 0.001, default: 0.985, doc: 'How long ripples last (higher = longer).' },
+      glass: { type: 'range', label: 'Card glass', min: 0.6, max: 1, step: 0.02, default: 0.86, doc: 'Card opacity; lower shows more water.' },
+    },
+    vars: (s) => ({
+      '--bg': s.deep, '--fg': '#f1f8fb', '--muted': '#c3dbe5', '--line': 'rgba(255,255,255,.22)', '--surface': 'transparent', '--control': 'rgba(4,28,42,.55)',
+      '--card': `rgba(248,252,254,${s.glass})`, '--card-fg': '#0b2533', '--card-muted': '#36505d', '--card-border': 'rgba(255,255,255,.6)',
+      '--card-shadow': '0 6px 18px rgba(0,20,35,.25)', '--card-shadow-hover': '0 10px 26px rgba(0,20,35,.35)', '--card-blur': 'blur(8px)',
+      '--header-bg': 'rgba(3,22,34,.45)', '--header-blur': 'blur(10px)', '--panel': '#f6fbfd', '--panel-fg': '#0b2533', '--panel-muted': '#3e5a68',
+      '--source-bg': 'rgba(3,22,34,.72)', '--placeholder': 'rgba(255,255,255,.12)', '--col-head-fg': '#ffffff', '--col-head-shadow': '0 1px 3px rgba(0,0,0,.5)',
+      '--accent': '#7fe3ff', '--accent-fg': '#04202e', '--radius': '10px',
+      '--pad': '12px', '--gap': '10px', '--col-pad': '10px', '--card-title-size': '14px',
+      '--tag-l': '0.9', '--tag-c': '0.06', '--tag-fg': '#0b2533',
+    }),
+    swatch: (s) => [s.deep, s.shallow, '#f8fcfe'],
+  },
+  {
+    id: 'ballpit', name: 'Ball pit', blurb: 'WebGL balls that bounce off cards.', effect: 'ballpit',
+    settings: {
+      background: { type: 'color', label: 'Ground', default: '#f4f1ec', doc: 'Colour behind the balls.' },
+      count: { type: 'range', label: 'Balls', min: 20, max: 400, step: 10, default: 160, doc: 'Number of balls (respawns them).' },
+      size: { type: 'range', label: 'Ball size', min: 6, max: 30, step: 1, unit: 'px', default: 13, doc: 'Average radius (respawns them).' },
+      gravity: { type: 'range', label: 'Gravity', min: 0, max: 2000, step: 50, default: 900, doc: 'Downward pull in px/s².' },
+      bounce: { type: 'range', label: 'Bounciness', min: 0, max: 0.95, step: 0.05, default: 0.6, doc: 'Energy kept per bounce.' },
+      palette: { type: 'select', label: 'Palette', options: Object.keys(BALL_PALETTES), default: 'candy', doc: 'Ball colours (respawns them).' },
+    },
+    vars: (s) => ({
+      '--bg': s.background, '--fg': '#1d1b18', '--muted': '#5c574f', '--line': 'rgba(0,0,0,.12)', '--surface': 'transparent', '--control': 'rgba(255,255,255,.85)',
+      '--card': '#ffffff', '--card-fg': '#1d1b18', '--card-muted': '#5c574f', '--card-border': 'rgba(0,0,0,.06)',
+      '--card-shadow': '0 2px 6px rgba(0,0,0,.08)', '--card-shadow-hover': '0 6px 16px rgba(0,0,0,.12)',
+      '--header-bg': 'rgba(255,255,255,.7)', '--header-blur': 'blur(8px)', '--panel': '#ffffff', '--panel-fg': '#1d1b18', '--panel-muted': '#5c574f',
+      '--source-bg': 'rgba(255,255,255,.9)', '--placeholder': 'rgba(0,0,0,.03)', '--col-head-fg': '#1d1b18',
+      '--accent': '#5b4cf0', '--accent-fg': '#ffffff', '--radius': '14px',
+      '--pad': '12px 14px', '--gap': '10px', '--col-pad': '8px', '--card-title-size': '14px',
+      '--tag-l': '0.92', '--tag-c': '0.07', '--tag-fg': '#1d1b18',
+    }),
+    swatch: (s) => [s.background, ...BALL_PALETTES[s.palette].slice(0, 2)],
+  },
+];
+
+function themeById(id) {
+  const t = THEMES.find((x) => x.id === id);
+  return t === undefined ? fail(`Unknown theme "${id}"`) : t;
+}
+function defaultSettings(theme) {
+  return Object.fromEntries(Object.entries(theme.settings).map(([k, def]) => [k, def.default]));
+}
+function coerceSetting(def, raw) {
+  switch (def.type) {
+    case 'color': return /^#[0-9a-f]{6}$/i.test(raw) ? raw : fail(`"${raw}" is not a colour`);
+    case 'range': { const n = Number(raw); return Number.isFinite(n) && n >= def.min && n <= def.max ? n : fail(`${def.label} must be between ${def.min} and ${def.max}`); }
+    case 'select': return def.options.includes(raw) ? raw : fail(`${def.label} must be one of ${def.options.join(', ')}`);
+    case 'boolean': return typeof raw === 'boolean' ? raw : fail(`${def.label} must be on or off`);
+    default: return bug(`setting type "${def.type}"`);
+  }
+}
+const toStyle = (vars) => Object.entries(vars).map(([k, v]) => `${k}: ${v}`).join('; ');
+
+/* ---------- (5) WebGL effects. Each factory returns a fully initialised effect. ---------- */
+
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function compileProgram(gl, vsSrc, fsSrc) {
+  const make = (type, src) => {
+    const sh = gl.createShader(type);
+    gl.shaderSource(sh, src);
+    gl.compileShader(sh);
+    if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) { const log = gl.getShaderInfoLog(sh); gl.deleteShader(sh); fail(`Shader failed to compile: ${log}`); }
+    return sh;
+  };
+  const vs = make(gl.VERTEX_SHADER, vsSrc);
+  const fs = make(gl.FRAGMENT_SHADER, fsSrc);
+  const prog = gl.createProgram();
+  gl.attachShader(prog, vs);
+  gl.attachShader(prog, fs);
+  gl.linkProgram(prog);
+  gl.deleteShader(vs);
+  gl.deleteShader(fs);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) fail(`Shader program failed to link: ${gl.getProgramInfoLog(prog)}`);
+  return prog;
+}
+const rgb01 = (hex) => hexToRgb(hex).map((c) => c / 255);
+const clamp = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
+
+const OCEAN_VS = `#version 300 es
+in vec2 aPos;
+out vec2 vUv;
+void main() {
+  vUv = vec2(aPos.x * 0.5 + 0.5, 0.5 - aPos.y * 0.5);
+  gl_Position = vec4(aPos, 0.0, 1.0);
+}`;
+
+const OCEAN_FS = `#version 300 es
+precision highp float;
+uniform sampler2D uH;
+uniform vec2 uRes;
+uniform vec2 uTexel;
+uniform float uTime;
+uniform float uSwell;
+uniform vec3 uDeep;
+uniform vec3 uShallow;
+in vec2 vUv;
+out vec4 outColor;
+
+float swell(vec2 p) {
+  float t = uTime;
+  return sin(p.x * 0.011 + t * 0.8) * 0.5
+       + sin(p.y * 0.016 - t * 0.65 + p.x * 0.004) * 0.35
+       + sin((p.x + p.y) * 0.023 + t * 1.25) * 0.15
+       + sin((p.x * 0.7 - p.y) * 0.041 - t * 1.9) * 0.06;
+}
+
+void main() {
+  vec2 p = vUv * uRes;
+  float hL = texture(uH, vUv - vec2(uTexel.x, 0.0)).r;
+  float hR = texture(uH, vUv + vec2(uTexel.x, 0.0)).r;
+  float hU = texture(uH, vUv - vec2(0.0, uTexel.y)).r;
+  float hD = texture(uH, vUv + vec2(0.0, uTexel.y)).r;
+  float hC = texture(uH, vUv).r;
+  float e = 3.0;
+  float sx = (swell(p + vec2(e, 0.0)) - swell(p - vec2(e, 0.0))) / (2.0 * e);
+  float sy = (swell(p + vec2(0.0, e)) - swell(p - vec2(0.0, e))) / (2.0 * e);
+  vec2 grad = vec2(hR - hL, hD - hU) * 2.2 + vec2(sx, sy) * uSwell * 28.0;
+  vec3 n = normalize(vec3(-grad.x, grad.y, 1.0));
+  vec3 L = normalize(vec3(-0.35, 0.55, 0.75));
+  float diff = clamp(dot(n, L), 0.0, 1.0);
+  vec3 H = normalize(L + vec3(0.0, 0.0, 1.0));
+  float spec = pow(max(dot(n, H), 0.0), 90.0);
+  float height = hC * 0.5 + swell(p) * uSwell * 0.35;
+  float mixAmt = clamp(0.35 + height * 0.5 + (diff - 0.7) * 0.9, 0.0, 1.0);
+  vec3 col = mix(uDeep, uShallow, mixAmt);
+  float foam = smoothstep(0.18, 0.55, length(vec2(hR - hL, hD - hU)));
+  col += vec3(spec * 0.55) + vec3(foam * 0.35);
+  float vignette = smoothstep(1.25, 0.35, length(vUv - 0.5));
+  col *= mix(0.78, 1.0, vignette);
+  outColor = vec4(col, 1.0);
+}`;
+
+/** Ocean: CPU ripple simulation on a coarse grid + shader lighting. Static cards act as walls; dragged cards push the water. */
+function createOceanEffect(gl) {
+  const prog = compileProgram(gl, OCEAN_VS, OCEAN_FS);
+  const vao = gl.createVertexArray();
+  const buf = gl.createBuffer();
+  gl.bindVertexArray(vao);
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+  const aPos = gl.getAttribLocation(prog, 'aPos');
+  gl.enableVertexAttribArray(aPos);
+  gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+  gl.bindVertexArray(null);
+  const tex = gl.createTexture();
+  const U = Object.fromEntries(['uH', 'uRes', 'uTexel', 'uTime', 'uSwell', 'uDeep', 'uShallow'].map((n) => [n, gl.getUniformLocation(prog, n)]));
+  const GW = 160;
+  let grid = null;
+  let time = 0;
+  let acc = 0;
+  let lastDragged = new Map();
+
+  const ensureGrid = (w, h) => {
+    const gh = clamp(Math.round((GW * h) / Math.max(w, 1)), 24, 260);
+    if (grid !== null && grid.gh === gh) return;
+    const size = GW * gh;
+    grid = { gw: GW, gh, cur: new Float32Array(size), prev: new Float32Array(size), next: new Float32Array(size), mask: new Uint8Array(size) };
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.R16F, GW, gh, 0, gl.RED, gl.FLOAT, grid.cur);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  };
+  const cellsOf = (r, w, h, inset) => {
+    const { gw, gh } = grid;
+    return {
+      x0: clamp(Math.ceil((r.x / w) * gw) + inset, 1, gw - 2), x1: clamp(Math.floor(((r.x + r.w) / w) * gw) - inset, 1, gw - 2),
+      y0: clamp(Math.ceil((r.y / h) * gh) + inset, 1, gh - 2), y1: clamp(Math.floor(((r.y + r.h) / h) * gh) - inset, 1, gh - 2),
+    };
+  };
+  const addTo = (r, amount, w, h) => {
+    const c = cellsOf(r, w, h, 0);
+    for (let y = c.y0; y <= c.y1; y++) for (let x = c.x0; x <= c.x1; x++) grid.cur[y * grid.gw + x] += amount;
+  };
+  const simulate = (damping) => {
+    const { gw, gh, cur, prev, next, mask } = grid;
+    for (let y = 1; y < gh - 1; y++) {
+      for (let x = 1; x < gw - 1; x++) {
+        const i = y * gw + x;
+        next[i] = mask[i] === 1 ? 0 : ((cur[i - 1] + cur[i + 1] + cur[i - gw] + cur[i + gw]) * 0.5 - prev[i]) * damping;
+      }
+    }
+    grid.prev = cur; grid.cur = next; grid.next = prev;
+  };
+
+  return {
+    kind: 'ocean',
+    step(dt, frame, s) {
+      const { width: w, height: h } = frame;
+      time += dt;
+      ensureGrid(w, h);
+      grid.mask.fill(0);
+      const dragged = new Map();
+      for (const o of frame.obstacles) {
+        if (o.dragging) { dragged.set(o.id, o); continue; }
+        const c = cellsOf(o, w, h, 1);
+        for (let y = c.y0; y <= c.y1; y++) for (let x = c.x0; x <= c.x1; x++) grid.mask[y * grid.gw + x] = 1;
+      }
+      for (const o of dragged.values()) {
+        const speed = Math.hypot(o.vx, o.vy);
+        if (speed > 15) addTo(o, -s.wake * Math.min(speed / 1400, 1.2) * 0.45, w, h);
+      }
+      for (const [id, o] of lastDragged) {
+        if (!dragged.has(id)) addTo({ x: o.x - 16, y: o.y - 16, w: o.w + 32, h: o.h + 32 }, s.wake * 1.4, w, h);
+      }
+      lastDragged = dragged;
+      acc = Math.min(acc + dt, 4 / 60);
+      while (acc >= 1 / 60) { simulate(s.damping); acc -= 1 / 60; }
+
+      gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
+      gl.disable(gl.BLEND);
+      gl.useProgram(prog);
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, tex);
+      gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, grid.gw, grid.gh, gl.RED, gl.FLOAT, grid.cur);
+      gl.uniform1i(U.uH, 0);
+      gl.uniform2f(U.uRes, w, h);
+      gl.uniform2f(U.uTexel, 1 / grid.gw, 1 / grid.gh);
+      gl.uniform1f(U.uTime, time);
+      gl.uniform1f(U.uSwell, s.swell);
+      gl.uniform3fv(U.uDeep, rgb01(s.deep));
+      gl.uniform3fv(U.uShallow, rgb01(s.shallow));
+      gl.bindVertexArray(vao);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+      gl.bindVertexArray(null);
+    },
+    dispose() { gl.deleteProgram(prog); gl.deleteBuffer(buf); gl.deleteVertexArray(vao); gl.deleteTexture(tex); },
+  };
+}
+
+const BALL_VS = `#version 300 es
+in vec2 aPos;
+in float aR;
+in vec3 aCol;
+uniform vec2 uRes;
+uniform float uDpr;
+out vec3 vCol;
+out float vSize;
+void main() {
+  vec2 clip = (aPos / uRes) * 2.0 - 1.0;
+  gl_Position = vec4(clip.x, -clip.y, 0.0, 1.0);
+  vSize = aR * 2.0 * uDpr + 2.0;
+  gl_PointSize = vSize;
+  vCol = aCol;
+}`;
+
+const BALL_FS = `#version 300 es
+precision highp float;
+in vec3 vCol;
+in float vSize;
+out vec4 outColor;
+void main() {
+  vec2 c = gl_PointCoord * 2.0 - 1.0;
+  float d = length(c);
+  float aa = 3.0 / vSize;
+  float a = 1.0 - smoothstep(1.0 - aa, 1.0, d);
+  if (a <= 0.0) discard;
+  vec3 n = vec3(c.x, -c.y, sqrt(max(0.0, 1.0 - d * d)));
+  vec3 L = normalize(vec3(-0.45, 0.6, 0.75));
+  float diff = max(dot(n, L), 0.0);
+  float spec = pow(max(dot(reflect(-L, n), vec3(0.0, 0.0, 1.0)), 0.0), 28.0);
+  vec3 col = vCol * (0.42 + 0.68 * diff) + vec3(spec * 0.5);
+  outColor = vec4(col * a, a);
+}`;
+
+/** Ball pit: deterministic spawn from `seed`; circles collide with each other, the walls and every card rect (moving rects transfer their velocity). */
+function createBallPitEffect(gl, seed) {
+  const prog = compileProgram(gl, BALL_VS, BALL_FS);
+  const vao = gl.createVertexArray();
+  const buf = gl.createBuffer();
+  gl.bindVertexArray(vao);
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  const STRIDE = 6 * 4;
+  const attr = (name, size, offset) => { const loc = gl.getAttribLocation(prog, name); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, size, gl.FLOAT, false, STRIDE, offset); };
+  attr('aPos', 2, 0); attr('aR', 1, 8); attr('aCol', 3, 12);
+  gl.bindVertexArray(null);
+  const uRes = gl.getUniformLocation(prog, 'uRes');
+  const uDpr = gl.getUniformLocation(prog, 'uDpr');
+  let balls = null;
+  let spawnKey = '';
+  let gpu = new Float32Array(0);
+  const MAX_SPEED = 3200;
+
+  const spawn = (s, w, h) => {
+    const rng = mulberry32(seed);
+    const palette = BALL_PALETTES[s.palette] ?? bug(`palette "${s.palette}"`);
+    const n = s.count;
+    balls = { n, x: new Float32Array(n), y: new Float32Array(n), vx: new Float32Array(n), vy: new Float32Array(n), r: new Float32Array(n), col: new Float32Array(n * 3) };
+    for (let i = 0; i < n; i++) {
+      const r = s.size * (0.75 + rng() * 0.5);
+      balls.r[i] = r;
+      balls.x[i] = r + rng() * Math.max(w - 2 * r, 1);
+      balls.y[i] = r + rng() * Math.max(h * 0.5, 1);
+      balls.vx[i] = (rng() - 0.5) * 240;
+      balls.vy[i] = (rng() - 0.5) * 120;
+      const c = rgb01(palette[Math.floor(rng() * palette.length)]);
+      balls.col.set(c, i * 3);
+    }
+    gpu = new Float32Array(n * 6);
+  };
+
+  const physics = (h, s, W, H, rects) => {
+    const { n, x, y, vx, vy, r } = balls;
+    const e = s.bounce;
+    for (let i = 0; i < n; i++) {
+      vy[i] += s.gravity * h;
+      vx[i] *= 0.9995; vy[i] *= 0.9995;
+      x[i] += vx[i] * h; y[i] += vy[i] * h;
+      const ri = r[i];
+      if (x[i] < ri) { x[i] = ri; if (vx[i] < 0) vx[i] = -vx[i] * e; }
+      if (x[i] > W - ri) { x[i] = W - ri; if (vx[i] > 0) vx[i] = -vx[i] * e; }
+      if (y[i] < ri) { y[i] = ri; if (vy[i] < 0) vy[i] = -vy[i] * e; }
+      if (y[i] > H - ri) { y[i] = H - ri; if (vy[i] > 0) { vy[i] = -vy[i] * e; vx[i] *= 0.985; } }
+      for (const o of rects) {
+        const cx = clamp(x[i], o.x, o.x + o.w);
+        const cy = clamp(y[i], o.y, o.y + o.h);
+        let dx = x[i] - cx; let dy = y[i] - cy;
+        const d2 = dx * dx + dy * dy;
+        if (d2 >= ri * ri) continue;
+        let nx; let ny; let pen;
+        if (d2 > 1e-6) {
+          const d = Math.sqrt(d2); nx = dx / d; ny = dy / d; pen = ri - d;
+        } else {
+          const l = x[i] - o.x; const rr = o.x + o.w - x[i]; const t = y[i] - o.y; const b = o.y + o.h - y[i];
+          const m = Math.min(l, rr, t, b);
+          if (m === l) { nx = -1; ny = 0; pen = l + ri; } else if (m === rr) { nx = 1; ny = 0; pen = rr + ri; } else if (m === t) { nx = 0; ny = -1; pen = t + ri; } else { nx = 0; ny = 1; pen = b + ri; }
+        }
+        x[i] += nx * pen; y[i] += ny * pen;
+        const rvx = vx[i] - o.vx; const rvy = vy[i] - o.vy;
+        const vn = rvx * nx + rvy * ny;
+        if (vn < 0) {
+          const k = (1 + (o.dragging ? Math.max(e, 0.8) : e)) * vn;
+          vx[i] = rvx - k * nx + o.vx; vy[i] = rvy - k * ny + o.vy;
+        }
+      }
+    }
+    for (let i = 0; i < n; i++) {
+      for (let j = i + 1; j < n; j++) {
+        const dx = x[j] - x[i];
+        const rs = r[i] + r[j];
+        if (dx > rs || dx < -rs) continue;
+        const dy = y[j] - y[i];
+        const d2 = dx * dx + dy * dy;
+        if (d2 >= rs * rs || d2 < 1e-6) continue;
+        const d = Math.sqrt(d2); const nx = dx / d; const ny = dy / d;
+        const mi = r[i] * r[i]; const mj = r[j] * r[j]; const mt = mi + mj;
+        const overlap = rs - d;
+        x[i] -= nx * overlap * (mj / mt); y[i] -= ny * overlap * (mj / mt);
+        x[j] += nx * overlap * (mi / mt); y[j] += ny * overlap * (mi / mt);
+        const rv = (vx[j] - vx[i]) * nx + (vy[j] - vy[i]) * ny;
+        if (rv < 0) {
+          const jimp = (-(1 + e) * rv) / (1 / mi + 1 / mj);
+          vx[i] -= (jimp * nx) / mi; vy[i] -= (jimp * ny) / mi;
+          vx[j] += (jimp * nx) / mj; vy[j] += (jimp * ny) / mj;
+        }
+      }
+    }
+    for (let i = 0; i < n; i++) {
+      const sp = Math.hypot(vx[i], vy[i]);
+      if (sp > MAX_SPEED) { vx[i] *= MAX_SPEED / sp; vy[i] *= MAX_SPEED / sp; }
+    }
+  };
+
+  return {
+    kind: 'ballpit',
+    step(dt, frame, s) {
+      const { width: W, height: H, dpr } = frame;
+      const key = `${s.count}|${s.size}|${s.palette}`;
+      if (balls === null || key !== spawnKey) { spawn(s, W, H); spawnKey = key; }
+      const SUB = 4;
+      const h = Math.min(dt, 1 / 30) / SUB;
+      for (let k = 0; k < SUB; k++) physics(h, s, W, H, frame.obstacles);
+      const { n, x, y, r, col } = balls;
+      for (let i = 0; i < n; i++) {
+        const o = i * 6;
+        gpu[o] = x[i]; gpu[o + 1] = y[i]; gpu[o + 2] = r[i];
+        gpu[o + 3] = col[i * 3]; gpu[o + 4] = col[i * 3 + 1]; gpu[o + 5] = col[i * 3 + 2];
+      }
+      gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
+      gl.clearColor(0, 0, 0, 0);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+      gl.useProgram(prog);
+      gl.uniform2f(uRes, W, H);
+      gl.uniform1f(uDpr, dpr);
+      gl.bindVertexArray(vao);
+      gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+      gl.bufferData(gl.ARRAY_BUFFER, gpu, gl.DYNAMIC_DRAW);
+      gl.drawArrays(gl.POINTS, 0, n);
+      gl.bindVertexArray(null);
+    },
+    dispose() { gl.deleteProgram(prog); gl.deleteBuffer(buf); gl.deleteVertexArray(vao); },
+  };
+}
+
+const EFFECT_FACTORIES = {
+  ocean: (gl) => createOceanEffect(gl),
+  ballpit: (gl, seed) => createBallPitEffect(gl, seed),
+};
+
+/* ---------- (5b) Event effects: 2D particle bursts on an overlay canvas ----------
+ * Each burst factory takes (rect, env, rng) and returns a fully initialised { step(dt) -> alive, draw(ctx) }.
+ * rect is in board-local px; env holds theme colours read at the edge; rng is seeded at the edge.
+ */
+
+const FX_COLORS = ['#ff5d73', '#ffd93d', '#4cc9f0', '#45d483', '#7b6cf6', '#ff9f45'];
+const pick = (rng, list) => list[Math.floor(rng() * list.length)];
+const TAU = Math.PI * 2;
+
+/** Event -> effect choices. 'random' picks one of `options` each time; 'none' plays nothing. */
+const EVENT_EFFECTS = {
+  create: { label: 'New task', options: ['pop', 'supernova'], default: 'pop', doc: 'Plays on the new card when a task is added from a column.' },
+  delete: { label: 'Delete', options: ['explode', 'burn'], default: 'explode', doc: 'Plays where the card was when a task is deleted.' },
+  complete: { label: 'Complete', options: ['confetti', 'fireworks', 'bubbles', 'balloons'], default: 'confetti', doc: 'Plays where the card was when "Mark complete" sends a task to the archive.' },
+};
+const EFFECT_LABELS = {
+  pop: 'Pop in', supernova: 'Supernova', explode: 'Explode', burn: 'Burn up',
+  confetti: 'Confetti', fireworks: 'Fireworks', bubbles: 'Bubbles', balloons: 'Balloons', random: 'Random', none: 'None',
+};
+const ENTRY_CLASS = { pop: 'kb-anim-pop', supernova: 'kb-anim-nova' };
+const effectChoices = (event) => [...(EVENT_EFFECTS[event] ?? bug(`unknown effect event "${event}"`)).options, 'random', 'none'];
+function resolveEffect(event, choice, rng) {
+  const spec = EVENT_EFFECTS[event] ?? bug(`unknown effect event "${event}"`);
+  if (choice === 'none') return null;
+  if (choice === 'random') return pick(rng, spec.options);
+  if (!spec.options.includes(choice)) bug(`effect "${choice}" is not valid for ${event}`);
+  return choice;
+}
+
+function burstExplode(r, env, rng) {
+  const cols = clamp(Math.round(r.w / 34), 4, 10);
+  const rows = clamp(Math.round(r.h / 22), 2, 8);
+  const cx = r.x + r.w / 2;
+  const cy = r.y + r.h / 2;
+  const sw = r.w / cols;
+  const sh = r.h / rows;
+  const shards = [];
+  for (let j = 0; j < rows; j++) {
+    for (let i = 0; i < cols; i++) {
+      const x = r.x + sw * (i + 0.5);
+      const y = r.y + sh * (j + 0.5);
+      const d = Math.hypot(x - cx, y - cy) || 1;
+      const sp = 250 + rng() * 650;
+      shards.push({ x, y, vx: ((x - cx) / d) * sp + (rng() - 0.5) * 200, vy: ((y - cy) / d) * sp - 250 - rng() * 250, rot: 0, vr: (rng() - 0.5) * 18, life: 1 + rng() * 0.7, w: sw * (0.7 + rng() * 0.5), h: sh * (0.7 + rng() * 0.5) });
+    }
+  }
+  const sparks = Array.from({ length: 50 }, () => {
+    const a = rng() * TAU;
+    const sp = 300 + rng() * 900;
+    return { x: cx + (rng() - 0.5) * r.w * 0.6, y: cy, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 0.3 + rng() * 0.5 };
+  });
+  const R = Math.max(r.w, r.h);
+  let t = 0;
+  return {
+    step(dt) {
+      t += dt;
+      for (const s of shards) { s.vy += 1500 * dt; s.vx *= 0.995; s.x += s.vx * dt; s.y += s.vy * dt; s.rot += s.vr * dt; s.life -= dt; }
+      for (const p of sparks) { p.vx *= 0.94; p.vy = p.vy * 0.94 + 600 * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt; }
+      return shards.some((s) => s.life > 0) || sparks.some((p) => p.life > 0);
+    },
+    draw(ctx) {
+      if (t < 0.18) {
+        const a = 1 - t / 0.18;
+        const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, R);
+        g.addColorStop(0, `rgba(255,240,200,${0.9 * a})`);
+        g.addColorStop(1, 'rgba(255,200,120,0)');
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.fill();
+      }
+      for (const s of shards) {
+        if (s.life <= 0) continue;
+        ctx.save();
+        ctx.globalAlpha = clamp(s.life / 0.4, 0, 1);
+        ctx.translate(s.x, s.y); ctx.rotate(s.rot);
+        ctx.fillStyle = env.card; ctx.strokeStyle = env.cardBorder; ctx.lineWidth = 1;
+        ctx.fillRect(-s.w / 2, -s.h / 2, s.w, s.h); ctx.strokeRect(-s.w / 2, -s.h / 2, s.w, s.h);
+        ctx.restore();
+      }
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = '#ffb347'; ctx.lineWidth = 2;
+      for (const p of sparks) {
+        if (p.life <= 0) continue;
+        ctx.globalAlpha = clamp(p.life / 0.3, 0, 1);
+        ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x - p.vx * 0.02, p.y - p.vy * 0.02); ctx.stroke();
+      }
+    },
+  };
+}
+
+function burstBurn(r, env, rng) {
+  const DUR = 1.5;
+  const seeds = [rng() * 10, rng() * 10, rng() * 10];
+  let t = 0;
+  let flames = [];
+  let smoke = [];
+  const edgeY = (x, p) => {
+    let n = 0;
+    for (let k = 0; k < 3; k++) n += Math.sin(x * (0.05 + k * 0.04) + seeds[k] + t * (3 + k * 2)) * (5 - k * 1.5);
+    return r.y + r.h * (1 - p) + n * Math.min(1, p * 4);
+  };
+  const edgePoints = (p) => {
+    const pts = [];
+    for (let x = r.x; x < r.x + r.w; x += 6) pts.push([x, Math.max(r.y, edgeY(x, p))]);
+    pts.push([r.x + r.w, Math.max(r.y, edgeY(r.x + r.w, p))]);
+    return pts;
+  };
+  return {
+    step(dt) {
+      t += dt;
+      const p = Math.min(t / DUR, 1);
+      if (p < 1) {
+        const n = Math.ceil((r.w / 6) * dt * 30);
+        for (let i = 0; i < n; i++) {
+          const x = r.x + rng() * r.w;
+          const y = edgeY(x, p);
+          flames.push({ x, y, vx: (rng() - 0.5) * 40, vy: -(80 + rng() * 140), life: 0.35 + rng() * 0.5, max: 0.85, size: 5 + rng() * 9, ember: false });
+          if (rng() < 0.12) smoke.push({ x, y, vx: (rng() - 0.5) * 20, vy: -(30 + rng() * 40), life: 1.2 + rng(), max: 2.2, size: 6 + rng() * 6 });
+          if (rng() < 0.06) flames.push({ x, y, vx: (rng() - 0.5) * 120, vy: -(150 + rng() * 200), life: 1 + rng(), max: 2, size: 1.6, ember: true });
+        }
+      }
+      for (const f of flames) { f.vx += (rng() - 0.5) * 600 * dt; f.x += f.vx * dt; f.y += f.vy * dt; f.life -= dt; }
+      for (const s of smoke) { s.x += s.vx * dt; s.y += s.vy * dt; s.size += 14 * dt; s.life -= dt; }
+      flames = flames.filter((f) => f.life > 0);
+      smoke = smoke.filter((s) => s.life > 0);
+      return p < 1 || flames.length > 0 || smoke.length > 0;
+    },
+    draw(ctx) {
+      const p = Math.min(t / DUR, 1);
+      if (p < 1) {
+        const pts = edgePoints(p);
+        ctx.save();
+        ctx.beginPath(); ctx.moveTo(r.x, r.y); ctx.lineTo(r.x + r.w, r.y);
+        for (let i = pts.length - 1; i >= 0; i--) ctx.lineTo(pts[i][0], pts[i][1]);
+        ctx.closePath();
+        ctx.fillStyle = env.card; ctx.fill(); ctx.clip();
+        const band = r.y + r.h * (1 - p);
+        const g = ctx.createLinearGradient(0, band - 22, 0, band + 6);
+        g.addColorStop(0, 'rgba(60,30,10,0)'); g.addColorStop(1, 'rgba(40,18,6,.85)');
+        ctx.fillStyle = g; ctx.fillRect(r.x, r.y, r.w, r.h);
+        ctx.restore();
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.strokeStyle = 'rgba(255,140,40,.9)'; ctx.lineWidth = 2.5; ctx.shadowColor = '#ff7a1a'; ctx.shadowBlur = 12;
+        ctx.beginPath(); pts.forEach(([x, y], i) => (i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y))); ctx.stroke();
+        ctx.restore();
+      }
+      for (const s of smoke) {
+        ctx.fillStyle = `rgba(90,90,90,${(0.2 * clamp((s.life / s.max) * 2, 0, 1)).toFixed(3)})`;
+        ctx.beginPath(); ctx.arc(s.x, s.y, s.size, 0, TAU); ctx.fill();
+      }
+      ctx.globalCompositeOperation = 'lighter';
+      for (const f of flames) {
+        const q = f.life / f.max;
+        ctx.globalAlpha = clamp(q * 1.4, 0, 1);
+        ctx.fillStyle = f.ember ? '#ffcf70' : q > 0.6 ? '#fff0a8' : q > 0.3 ? '#ffa53a' : '#e2401c';
+        ctx.beginPath(); ctx.arc(f.x, f.y, f.size * (0.4 + q * 0.6), 0, TAU); ctx.fill();
+      }
+    },
+  };
+}
+
+function burstConfetti(r, env, rng) {
+  const cx = r.x + r.w / 2;
+  const cy = r.y + r.h * 0.3;
+  const ps = Array.from({ length: 140 }, () => {
+    const a = -Math.PI / 2 + (rng() - 0.5) * Math.PI * 0.9;
+    const sp = 450 + rng() * 750;
+    return { x: cx + (rng() - 0.5) * r.w * 0.6, y: cy, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, rot: rng() * TAU, vr: (rng() - 0.5) * 14, ph: rng() * TAU, vph: 6 + rng() * 10, w: 6 + rng() * 6, h: 3 + rng() * 4, color: pick(rng, FX_COLORS), life: 2.2 + rng() * 1.3 };
+  });
+  return {
+    step(dt) {
+      for (const p of ps) {
+        p.vx *= Math.pow(0.35, dt);
+        p.vy = p.vy * Math.pow(0.5, dt) + 1100 * dt;
+        p.ph += p.vph * dt;
+        p.x += p.vx * dt + Math.sin(p.ph) * 30 * dt;
+        p.y += p.vy * dt;
+        p.rot += p.vr * dt;
+        p.life -= dt;
+      }
+      return ps.some((p) => p.life > 0);
+    },
+    draw(ctx) {
+      for (const p of ps) {
+        if (p.life <= 0) continue;
+        ctx.save();
+        ctx.globalAlpha = clamp(p.life / 0.5, 0, 1);
+        ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.scale(1, Math.cos(p.ph));
+        ctx.fillStyle = p.color; ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+        ctx.restore();
+      }
+    },
+  };
+}
+
+const easeOutCubic = (p) => 1 - Math.pow(1 - p, 3);
+const easeOutQuart = (p) => 1 - Math.pow(1 - p, 4);
+
+/** Rockets fly a curved (quadratic) path that eases out to a near-stop at the apex, then burst. */
+function burstFireworks(r, env, rng) {
+  const cx = r.x + r.w / 2;
+  const rockets = Array.from({ length: 4 }, (_, i) => {
+    const x0 = cx + (rng() - 0.5) * Math.max(120, r.w * 0.8);
+    const y0 = r.y;
+    const rise = 220 + rng() * 160;
+    const drift = (rng() < 0.5 ? -1 : 1) * (50 + rng() * 120);
+    const y1 = Math.max(40, y0 - rise);
+    return {
+      delay: i * 0.22, t: 0, dur: 0.85 + rng() * 0.35,
+      p0: [x0, y0],
+      c: [x0 - drift * 0.35, y0 - (y0 - y1) * 0.85], // pulls the path one way first, so it bows into an arc
+      p1: [x0 + drift, y1],
+      x: x0, y: y0, color: pick(rng, FX_COLORS), exploded: false, trail: [],
+    };
+  });
+  const along = (k, e) => {
+    const u = 1 - e;
+    return [u * u * k.p0[0] + 2 * u * e * k.c[0] + e * e * k.p1[0], u * u * k.p0[1] + 2 * u * e * k.c[1] + e * e * k.p1[1]];
+  };
+  let sparks = [];
+  return {
+    step(dt) {
+      for (const k of rockets) {
+        if (k.delay > 0) { k.delay -= dt; continue; }
+        if (k.exploded) continue;
+        k.t = Math.min(k.t + dt, k.dur);
+        [k.x, k.y] = along(k, easeOutCubic(k.t / k.dur));
+        k.trail.push([k.x, k.y]);
+        if (k.trail.length > 12) k.trail.shift();
+        if (k.t >= k.dur) {
+          k.exploded = true;
+          const n = 70;
+          for (let j = 0; j < n; j++) {
+            const a = (j / n) * TAU + rng() * 0.1;
+            const sp = 120 + rng() * 240;
+            sparks.push({ x: k.x, y: k.y, px: k.x, py: k.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 0.9 + rng() * 0.6, max: 1.5, color: rng() < 0.15 ? '#ffffff' : k.color });
+          }
+        }
+      }
+      for (const s of sparks) {
+        s.px = s.x; s.py = s.y;
+        s.vx *= Math.pow(0.3, dt); s.vy = s.vy * Math.pow(0.3, dt) + 180 * dt;
+        s.x += s.vx * dt; s.y += s.vy * dt; s.life -= dt;
+      }
+      sparks = sparks.filter((s) => s.life > 0);
+      return rockets.some((k) => !k.exploded) || sparks.length > 0;
+    },
+    draw(ctx) {
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      for (const k of rockets) {
+        if (k.delay > 0 || k.exploded || k.trail.length < 2) continue;
+        // The trail tapers: older points are fainter, so the curve reads clearly.
+        for (let j = 1; j < k.trail.length; j++) {
+          ctx.globalAlpha = (j / k.trail.length) * 0.8;
+          ctx.strokeStyle = k.color; ctx.lineWidth = 1 + (j / k.trail.length) * 1.5;
+          ctx.beginPath(); ctx.moveTo(k.trail[j - 1][0], k.trail[j - 1][1]); ctx.lineTo(k.trail[j][0], k.trail[j][1]); ctx.stroke();
+        }
+        ctx.fillStyle = '#ffffff'; ctx.globalAlpha = 1;
+        ctx.beginPath(); ctx.arc(k.x, k.y, 2.5, 0, TAU); ctx.fill();
+      }
+      for (const s of sparks) {
+        const q = s.life / s.max;
+        ctx.globalAlpha = clamp(q * 1.3, 0, 1) * (0.7 + 0.3 * Math.sin(s.life * 40));
+        ctx.strokeStyle = s.color; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(s.px - s.vx * 0.03, s.py - s.vy * 0.03); ctx.lineTo(s.x, s.y); ctx.stroke();
+      }
+    },
+  };
+}
+
+function burstBubbles(r, env, rng) {
+  const bs = Array.from({ length: 28 }, () => ({
+    x0: r.x + rng() * r.w, y: r.y + r.h * (0.3 + rng() * 0.7), rad: 5 + rng() * 14, vy: -(50 + rng() * 110),
+    amp: 6 + rng() * 14, f: 1.5 + rng() * 2.5, ph: rng() * TAU, life: 1.2 + rng() * 2.2, t: 0, popped: false, popT: 0, color: pick(rng, FX_COLORS),
+    delay: rng() * 0.45,
+  }));
+  const FADE_IN = 0.35;
+  const xOf = (b) => b.x0 + Math.sin(b.t * b.f + b.ph) * b.amp;
+  return {
+    step(dt) {
+      for (const b of bs) {
+        if (b.delay > 0) { b.delay -= dt; continue; }
+        b.t += dt;
+        if (!b.popped) { b.vy *= Math.pow(1.2, dt); b.y += b.vy * dt; b.life -= dt; if (b.life <= 0) b.popped = true; } else b.popT += dt;
+      }
+      return bs.some((b) => !b.popped || b.popT < 0.25);
+    },
+    draw(ctx) {
+      for (const b of bs) {
+        if (b.delay > 0) continue;
+        const x = xOf(b);
+        if (!b.popped) {
+          const fade = easeOutCubic(Math.min(1, b.t / FADE_IN));
+          const rad = b.rad * (0.55 + 0.45 * fade);
+          ctx.globalAlpha = fade;
+          ctx.fillStyle = rgba(b.color, 0.14); ctx.strokeStyle = rgba(b.color, 0.85); ctx.lineWidth = 1.5;
+          ctx.beginPath(); ctx.arc(x, b.y, rad, 0, TAU); ctx.fill(); ctx.stroke();
+          ctx.fillStyle = 'rgba(255,255,255,.85)';
+          ctx.beginPath(); ctx.arc(x - rad * 0.35, b.y - rad * 0.35, rad * 0.22, 0, TAU); ctx.fill();
+        } else if (b.popT < 0.25) {
+          const q = b.popT / 0.25;
+          ctx.globalAlpha = 1 - q; ctx.strokeStyle = b.color; ctx.lineWidth = 1.5;
+          for (let k = 0; k < 6; k++) {
+            const a = (k / 6) * TAU;
+            const r0 = b.rad * (1 + q * 0.6);
+            const r1 = b.rad * (1.3 + q * 1.2);
+            ctx.beginPath(); ctx.moveTo(x + Math.cos(a) * r0, b.y + Math.sin(a) * r0); ctx.lineTo(x + Math.cos(a) * r1, b.y + Math.sin(a) * r1); ctx.stroke();
+          }
+        }
+      }
+    },
+  };
+}
+
+function burstBalloons(r, env, rng) {
+  const N = 7;
+  const bs = Array.from({ length: N }, (_, i) => ({
+    x0: r.x + (r.w * (i + 0.5)) / N + (rng() - 0.5) * 20, y: r.y + r.h * 0.5 + rng() * 20, rad: 15 + rng() * 7, vy: -(70 + rng() * 60),
+    sway: 8 + rng() * 10, f: 0.8 + rng() * 0.8, ph: rng() * TAU, delay: rng() * 0.35, color: FX_COLORS[i % FX_COLORS.length], t: 0, scale: 0,
+  }));
+  return {
+    step(dt) {
+      for (const b of bs) {
+        if (b.delay > 0) { b.delay -= dt; continue; }
+        b.t += dt; b.scale = Math.min(1, b.scale + dt * 4); b.vy -= 40 * dt; b.y += b.vy * dt;
+      }
+      return bs.some((b) => b.y + b.rad * 4 > 0 && b.t < 7);
+    },
+    draw(ctx) {
+      for (const b of bs) {
+        if (b.delay > 0) continue;
+        const x = b.x0 + Math.sin(b.t * b.f + b.ph) * b.sway;
+        ctx.save();
+        ctx.translate(x, b.y); ctx.scale(b.scale, b.scale);
+        const ry = b.rad * 1.2;
+        ctx.strokeStyle = env.fg; ctx.globalAlpha = 0.45; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(0, ry + 4); ctx.quadraticCurveTo(Math.sin(b.t * 2 + b.ph) * 10, ry + 26, Math.sin(b.t * 1.4 + b.ph) * 6, ry + 50); ctx.stroke();
+        ctx.globalAlpha = 1; ctx.fillStyle = b.color;
+        ctx.beginPath(); ctx.moveTo(-3, ry + 5); ctx.lineTo(3, ry + 5); ctx.lineTo(0, ry - 1); ctx.closePath(); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(0, 0, b.rad, ry, 0, 0, TAU); ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,.5)';
+        ctx.beginPath(); ctx.ellipse(-b.rad * 0.35, -ry * 0.4, b.rad * 0.2, ry * 0.3, -0.4, 0, TAU); ctx.fill();
+        ctx.restore();
+      }
+    },
+  };
+}
+
+function burstPop(r, env, rng) {
+  const cx = r.x + r.w / 2;
+  const cy = r.y + r.h / 2;
+  const dots = Array.from({ length: 16 }, (_, i) => {
+    const a = (i / 16) * TAU + rng() * 0.2;
+    return { a, d: 0, sp: 90 + rng() * 80, size: 2 + rng() * 2.5 };
+  });
+  let t = 0;
+  return {
+    step(dt) { t += dt; for (const d of dots) d.d += d.sp * dt; return t < 0.55; },
+    draw(ctx) {
+      const q = t / 0.55;
+      const grow = 6 + q * 22;
+      ctx.globalAlpha = 1 - q; ctx.strokeStyle = env.accent; ctx.lineWidth = 2;
+      ctx.strokeRect(r.x - grow, r.y - grow, r.w + grow * 2, r.h + grow * 2);
+      ctx.fillStyle = env.accent;
+      for (const d of dots) {
+        const ex = (r.w / 2) * Math.abs(Math.cos(d.a)) + d.d;
+        const ey = (r.h / 2) * Math.abs(Math.sin(d.a)) + d.d;
+        ctx.beginPath(); ctx.arc(cx + Math.sign(Math.cos(d.a)) * ex, cy + Math.sign(Math.sin(d.a)) * ey, d.size * (1 - q * 0.6), 0, TAU); ctx.fill();
+      }
+    },
+  };
+}
+
+/** Flash, shockwave and sparks all rush out and then decelerate (ease-out) to a stop. */
+function burstSupernova(r, env, rng) {
+  const cx = r.x + r.w / 2;
+  const cy = r.y + r.h / 2;
+  const R = Math.max(r.w, r.h) * 1.4;
+  const colors = ['#ffffff', env.accent, '#ffd27a'];
+  const ps = Array.from({ length: 80 }, () => ({
+    a: rng() * TAU, reach: R * (0.4 + rng() * 0.9), dur: 0.9 + rng() * 0.6, color: pick(rng, colors),
+  }));
+  const DUR = 1.6;
+  let t = 0;
+  return {
+    step(dt) { t += dt; return t < DUR; },
+    draw(ctx) {
+      ctx.globalCompositeOperation = 'lighter';
+      const CORE = 0.6;
+      if (t < CORE) {
+        const q = t / CORE;
+        const rad = Math.max(1, R * 0.9 * easeOutQuart(q));
+        const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, rad);
+        g.addColorStop(0, `rgba(255,255,255,${1 - q})`); g.addColorStop(0.4, `rgba(255,230,180,${0.6 * (1 - q)})`); g.addColorStop(1, 'rgba(255,200,120,0)');
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, rad, 0, TAU); ctx.fill();
+      }
+      const RING = 1.2;
+      if (t < RING) {
+        const q = t / RING;
+        ctx.globalAlpha = Math.pow(1 - q, 1.5); ctx.strokeStyle = env.accent; ctx.lineWidth = 6 * (1 - q) + 1;
+        ctx.beginPath(); ctx.arc(cx, cy, R * 1.3 * easeOutQuart(q), 0, TAU); ctx.stroke();
+      }
+      ctx.lineWidth = 2; ctx.lineCap = 'round';
+      for (const p of ps) {
+        const q = Math.min(1, t / p.dur);
+        if (q >= 1) continue;
+        const d = p.reach * easeOutQuart(q);
+        const speed = 4 * Math.pow(1 - q, 3); // derivative of easeOutQuart: streaks shrink as sparks slow
+        const tail = Math.min(d, p.reach * speed * 0.08);
+        ctx.globalAlpha = Math.pow(1 - q, 0.8);
+        ctx.strokeStyle = p.color;
+        ctx.beginPath();
+        ctx.moveTo(cx + Math.cos(p.a) * (d - tail), cy + Math.sin(p.a) * (d - tail));
+        ctx.lineTo(cx + Math.cos(p.a) * d + 0.01, cy + Math.sin(p.a) * d);
+        ctx.stroke();
+      }
+    },
+  };
+}
+
+const BURSTS = {
+  explode: burstExplode, burn: burstBurn,
+  confetti: burstConfetti, fireworks: burstFireworks, bubbles: burstBubbles, balloons: burstBalloons,
+  pop: burstPop, supernova: burstSupernova,
+};
+
+/** Pure: attach px/s velocities to obstacle rects using the previous frame's positions. */
+function withVelocities(prev, rects, dt) {
+  const next = new Map();
+  const out = rects.map((o) => {
+    const p = prev.get(o.id);
+    const vx = p === undefined ? 0 : p.vx * 0.5 + ((o.x - p.x) / dt) * 0.5;
+    const vy = p === undefined ? 0 : p.vy * 0.5 + ((o.y - p.y) / dt) * 0.5;
+    const v = { ...o, vx, vy };
+    next.set(o.id, v);
+    return v;
+  });
+  return { obstacles: out, memory: next };
+}
+
+/* ---------- Seed board ---------- */
+
+const SEED_MD = `---
+effects.complete: random
+---
+# Sprint 14
+
+## Backlog
+
+### Export board as a .md file
+- id: t-01
+- owner: Aaron
+- tags: feature
+- history:
+  - Backlog @ 2026-10-19T09:12:00Z by Aaron
+
+\`\`\`md
+Download the current markdown, named after the **board title**.
+\`\`\`
+
+### Keyboard moves between columns
+- id: t-02
+- owner:
+- tags: a11y, feature
+- history:
+  - Backlog @ 2026-10-20T14:30:00Z
+
+\`\`\`md
+\`Alt\` + arrow keys move the focused card one column *left* or *right*.
+\`\`\`
+
+## To Do
+
+### Remember theme per board
+- id: t-03
+- owner: Priya
+- tags: themes
+- history:
+  - Backlog @ 2026-10-19T09:40:00Z
+  - To Do @ 2026-10-22T11:05:00Z by Priya
+
+### Line numbers in parse errors
+- id: t-04
+- owner: Sam
+- tags: markdown, bug
+- history:
+  - To Do @ 2026-10-23T16:20:00Z by Sam
+
+## Doing
+
+### Tune ocean wake strength
+- id: t-05
+- owner: Aaron
+- tags: themes, webgl
+- history:
+  - Backlog @ 2026-10-19T10:00:00Z
+  - To Do @ 2026-10-21T09:00:00Z by Priya
+  - Doing @ 2026-10-26T13:45:00Z by Aaron
+
+\`\`\`md
+Small cards barely disturb the water.
+
+- [x] Push water while dragging
+- [x] Splash on drop
+- [ ] Scale the push by **card area**
+\`\`\`
+
+### Tag pill colours
+- id: t-06
+- owner: Priya
+- tags: design
+- history:
+  - To Do @ 2026-10-22T11:10:00Z by Priya
+  - Doing @ 2026-10-24T10:30:00Z by Priya
+
+## Done
+
+### Markdown round-trip
+- id: t-07
+- owner: Sam
+- tags: markdown
+- history:
+  - Backlog @ 2026-10-15T08:00:00Z
+  - To Do @ 2026-10-16T09:30:00Z by Sam
+  - Doing @ 2026-10-17T10:00:00Z by Sam
+  - Done @ 2026-10-21T17:15:00Z by Sam
+
+\`\`\`md
+Board → markdown → board gives back the *same* board.
+
+> Descriptions live in a fenced block, so headings and lists in them never clash with the board's own headings.
+\`\`\`
+
+## Archive <!-- archive -->
+
+### Board title in the browser tab
+- id: t-08
+- owner: Sam
+- tags: feature
+- history:
+  - To Do @ 2026-10-14T09:00:00Z by Priya
+  - Doing @ 2026-10-15T10:20:00Z by Priya
+  - Doing @ 2026-10-16T08:05:00Z by Sam
+  - Done @ 2026-10-16T15:40:00Z by Sam
+  - Archive @ 2026-10-18T09:00:00Z by Sam
+`;
+
+const STORAGE_BOARD = 'kb-board-md:v4';
+const STORAGE_BOARD_V3 = 'kb-board-md:v3';
+const STORAGE_BOARD_V2 = 'kb-board-md:v2';
+const STORAGE_BOARD_V1 = 'kb-board-md:v1';
+
+/** v3 files carried column stages ("<!-- stage: … -->" on headings, "[stage]" in history). v4 drops them. */
+function migrateV3(md) {
+  return md.replace(/^(## .*?)\s*<!--\s*stage:\s*[a-z-]+\s*-->\s*$/gm, '$1').replace(/^(\s+- .+? @ \S+) \[[a-z-]+\]/gm, '$1');
+}
+
+/** v1 files had bare description text after the metadata; v2 fences it. Pure text transform. */
+function migrateV1(md) {
+  const out = [];
+  let state = 'none'; // 'none' | 'meta' | 'desc'
+  let desc = [];
+  const flush = () => {
+    while (desc.length > 0 && desc[desc.length - 1].trim() === '') desc.pop();
+    if (desc.length > 0) out.push('```md', ...desc, '```', '');
+    desc = [];
+  };
+  for (const line of md.replace(/\r\n?/g, '\n').split('\n')) {
+    if (/^#{1,3} /.test(line)) { flush(); out.push(line); state = line.startsWith('### ') ? 'meta' : 'none'; continue; }
+    if (state === 'meta') { out.push(line); if (line.trim() === '') state = 'desc'; continue; }
+    if (state === 'desc') { desc.push(line); continue; }
+    out.push(line);
+  }
+  flush();
+  return out.join('\n');
+}
+const STORAGE_THEME_LEGACY = 'kb-theme:v1';
+const STORAGE_EFFECTS_LEGACY = 'kb-effects:v1';
+const MODES = [{ id: 'board', label: 'Board' }, { id: 'split', label: 'Split' }, { id: 'archive', label: 'Archive' }, { id: 'source', label: 'Markdown' }];
+
+/* ---------- (6) Component: the IO edge ---------- */
+
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.uid = `kb${Math.floor(Math.random() * 1e9).toString(36)}`;
+    this.fxSeed = 1337;
+    const loaded = Component.loadInitial(props);
+    this.state = {
+      board: loaded.board,
+      saveStatus: loaded.saveStatus,
+      storageWarning: loaded.storageWarning,
+      fresh: null,
+      restoreTargets: {},
+      mode: 'board',
+      sourceDraft: null,
+      parseError: null,
+      query: '',
+      filterOpen: false,
+      tagFilter: [],
+      ownerFilter: [],
+      pickerOpen: false,
+      editingTaskId: null,
+      drafts: {},
+      fieldErrors: {},
+      tagInput: '',
+      descTab: 'write',
+      historyOpen: false,
+      now: Date.now(),
+      drag: null,
+      opError: null,
+      effectError: null,
+      copyLabel: 'Copy',
+    };
+  }
+
+  static loadInitial(props) {
+    let board = parseBoard(SEED_MD);
+    if (props.startTheme !== undefined) board = setTheme(board, props.startTheme);
+    let saveStatus = 'Saved in this browser';
+    let storageWarning = null;
+    try {
+      const md = window.localStorage.getItem(STORAGE_BOARD);
+      // Older saves, newest first: v3 had column stages, v2 is already valid, v1 had unfenced descriptions.
+      const legacy = [[STORAGE_BOARD_V3, migrateV3], [STORAGE_BOARD_V2, (x) => x], [STORAGE_BOARD_V1, migrateV1]]
+        .map(([key, up]) => ({ text: window.localStorage.getItem(key), up })).find((x) => x.text !== null);
+      if (md !== null) {
+        try { board = parseBoard(md); } catch (err) { saveStatus = `Stored board didn't parse, showing the sample instead: ${err.message}`; }
+      } else if (legacy !== undefined) {
+        try {
+          board = parseBoard(legacy.up(legacy.text));
+          saveStatus = 'Upgraded your saved board to the current format';
+        } catch (err) { saveStatus = `Older saved board couldn't be upgraded, showing the sample instead: ${err.message}`; }
+      }
+      // Style and effect choices used to live in their own browser keys; fold them into the board header once.
+      const legacyTheme = window.localStorage.getItem(STORAGE_THEME_LEGACY);
+      const legacyFx = window.localStorage.getItem(STORAGE_EFFECTS_LEGACY);
+      if (legacyTheme !== null || legacyFx !== null) {
+        try {
+          if (legacyTheme !== null) {
+            const stored = JSON.parse(legacyTheme);
+            board = setTheme(board, stored.themeId);
+            for (const t of THEMES) {
+              const saved = stored.settings[t.id] ?? {};
+              for (const k of Object.keys(t.settings)) if (k in saved) board = setThemeSetting(board, t.id, k, saved[k]);
+            }
+          }
+          if (legacyFx !== null) {
+            const stored = JSON.parse(legacyFx);
+            for (const event of Object.keys(EVENT_EFFECTS)) if (event in stored) board = setEffect(board, event, stored[event]);
+          }
+        } catch (err) { storageWarning = `Earlier style settings couldn't be carried over: ${err.message}`; }
+        window.localStorage.removeItem(STORAGE_THEME_LEGACY);
+        window.localStorage.removeItem(STORAGE_EFFECTS_LEGACY);
+      }
+      window.localStorage.setItem(STORAGE_BOARD, serializeBoard(board));
+    } catch (err) {
+      saveStatus = `Not saved: this browser blocked storage (${err.message}). Copy the markdown to keep it.`;
+    }
+    return { board, saveStatus, storageWarning };
+  }
+
+  /* ---- lifecycle ---- */
+  componentDidMount() {
+    this.alive = true;
+    this.fx = null;
+    this.gl = null;
+    this.fxFailedFor = null;
+    this.obstacleMemory = new Map();
+    this.lastTs = null;
+    this.suppressClick = false;
+    this.bursts = [];
+    this.burstDirty = false;
+    this.onWinMove = (e) => this.handlePointerMove(e);
+    this.onWinUp = (e) => this.handlePointerUp(e);
+    window.addEventListener('pointermove', this.onWinMove);
+    window.addEventListener('pointerup', this.onWinUp);
+    window.addEventListener('pointercancel', this.onWinUp);
+    // The history summary measures open-ended stays against "now"; tick it here at the edge.
+    this.clock = window.setInterval(() => this.setState({ now: Date.now() }), 30000);
+    const loop = (ts) => {
+      if (!this.alive) return;
+      this.frame(ts);
+      this.raf = window.requestAnimationFrame(loop);
+    };
+    this.raf = window.requestAnimationFrame(loop);
+  }
+  componentWillUnmount() {
+    this.alive = false;
+    window.cancelAnimationFrame(this.raf);
+    window.clearInterval(this.clock);
+    window.removeEventListener('pointermove', this.onWinMove);
+    window.removeEventListener('pointerup', this.onWinUp);
+    window.removeEventListener('pointercancel', this.onWinUp);
+    if (this.fx !== null) { this.fx.dispose(); this.fx = null; }
+  }
+
+  /* ---- DOM geometry (local, unscaled coordinates relative to the board root) ---- */
+  rootEl() { return document.querySelector(`[data-kb-root="${this.uid}"]`); }
+  geometry() {
+    const root = this.rootEl();
+    if (root === null) bug('board root missing while handling input');
+    const r = root.getBoundingClientRect();
+    const scale = root.offsetWidth > 0 ? r.width / root.offsetWidth : 1;
+    return { root, left: r.left, top: r.top, scale, local: (rect) => ({ x: (rect.left - r.left) / scale, y: (rect.top - r.top) / scale, w: rect.width / scale, h: rect.height / scale }) };
+  }
+
+  /* ---- animation frame: WebGL effect + drag autoscroll ---- */
+  frame(ts) {
+    const dt = this.lastTs === null ? 1 / 60 : Math.min((ts - this.lastTs) / 1000, 0.05);
+    this.lastTs = ts;
+    const root = this.rootEl();
+    if (root === null) return; // not mounted into the document yet (first frame)
+    this.autoScroll(root);
+    try {
+      this.stepBursts(root, dt);
+    } catch (err) {
+      this.bursts = [];
+      this.setState({ opError: `Effect stopped: ${err.message}` });
+    }
+    const theme = themeById(this.state.board.settings.theme);
+    if (theme.effect === null) {
+      if (this.fx !== null) { this.fx.dispose(); this.fx = null; }
+      return;
+    }
+    if (this.fxFailedFor === theme.id) return;
+    const canvas = root.querySelector('[data-kb-canvas]');
+    if (canvas === null) bug('effect canvas missing');
+    if (this.gl === null) {
+      this.gl = canvas.getContext('webgl2', { antialias: true, alpha: true, premultipliedAlpha: true });
+      if (this.gl === null) {
+        this.fxFailedFor = theme.id;
+        this.setState({ effectError: `${theme.name} needs WebGL2, which this browser didn't provide. The board works; pick a non-WebGL style for a cleaner look.` });
+        return;
+      }
+    }
+    try {
+      if (this.fx === null || this.fx.kind !== theme.effect) {
+        if (this.fx !== null) this.fx.dispose();
+        this.fx = null;
+        const factory = EFFECT_FACTORIES[theme.effect] ?? bug(`no effect factory "${theme.effect}"`);
+        this.fx = factory(this.gl, this.fxSeed);
+      }
+      const geo = this.geometry();
+      const w = root.offsetWidth;
+      const h = root.offsetHeight;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const cw = Math.max(1, Math.round(w * dpr));
+      const ch = Math.max(1, Math.round(h * dpr));
+      if (canvas.width !== cw || canvas.height !== ch) { canvas.width = cw; canvas.height = ch; }
+      const rects = Array.from(root.querySelectorAll('[data-obstacle]')).map((el) => {
+        const id = el.getAttribute('data-obstacle');
+        return { id, dragging: id.startsWith('drag:'), ...geo.local(el.getBoundingClientRect()) };
+      });
+      const { obstacles, memory } = withVelocities(this.obstacleMemory, rects, dt);
+      this.obstacleMemory = memory;
+      this.fx.step(dt, { width: w, height: h, dpr, obstacles }, this.state.board.settings.themes[theme.id]);
+    } catch (err) {
+      this.fxFailedFor = theme.id;
+      if (this.fx !== null) { this.fx.dispose(); this.fx = null; }
+      this.setState({ effectError: `${theme.name} effect stopped: ${err.message}` });
+    }
+  }
+
+  /* ---- event effects (overlay canvas) ---- */
+  randomSeed() { return Math.floor(Math.random() * 4294967296); }
+  pickEffect(event) { return resolveEffect(event, this.state.board.settings.effects[event], mulberry32(this.randomSeed())); }
+  cardRect(taskId) {
+    const geo = this.geometry();
+    const el = geo.root.querySelector(`[data-card-slot="${taskId}"]`);
+    return el === null ? null : geo.local(el.getBoundingClientRect());
+  }
+  elRect(el) { return this.geometry().local(el.getBoundingClientRect()); }
+  playEffect(kind, rect) {
+    if (kind === null) return; // the user chose "None"
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return; // respect the OS setting
+    const root = this.rootEl();
+    if (root === null) bug('board root missing while starting an effect');
+    const cs = window.getComputedStyle(root);
+    const v = (name) => cs.getPropertyValue(name).trim();
+    const env = { card: v('--card'), cardBorder: v('--card-border'), accent: v('--accent'), fg: v('--fg') };
+    const make = BURSTS[kind] ?? bug(`no burst named "${kind}"`);
+    this.bursts = [...this.bursts, make(rect, env, mulberry32(this.randomSeed()))];
+  }
+  stepBursts(root, dt) {
+    const canvas = root.querySelector('[data-kb-burst]');
+    if (canvas === null) bug('effect overlay canvas missing');
+    if (this.bursts.length === 0) {
+      if (this.burstDirty) { canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height); this.burstDirty = false; }
+      return;
+    }
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const cw = Math.max(1, Math.round(root.offsetWidth * dpr));
+    const ch = Math.max(1, Math.round(root.offsetHeight * dpr));
+    if (canvas.width !== cw || canvas.height !== ch) { canvas.width = cw; canvas.height = ch; }
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, cw, ch);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    this.bursts = this.bursts.filter((b) => b.step(dt));
+    for (const b of this.bursts) { ctx.save(); b.draw(ctx); ctx.restore(); }
+    this.burstDirty = true;
+  }
+
+  autoScroll(root) {
+    const d = this.state.drag;
+    if (d === null || !d.active) return;
+    const scroller = root.querySelector('[data-kb-scroller]');
+    if (scroller === null) return;
+    const geo = this.geometry();
+    const r = geo.local(scroller.getBoundingClientRect());
+    const edge = 60;
+    if (d.x < r.x + edge) scroller.scrollLeft -= 14;
+    else if (d.x > r.x + r.w - edge) scroller.scrollLeft += 14;
+  }
+
+  /* ---- commits ---- */
+  nowIso() { return new Date().toISOString(); }
+  persistBoard(board) {
+    try {
+      window.localStorage.setItem(STORAGE_BOARD, serializeBoard(board));
+      return 'Saved in this browser';
+    } catch (err) {
+      return `Not saved: this browser blocked storage (${err.message}). Copy the markdown to keep it.`;
+    }
+  }
+  /** Run a pure board transform; on success save and clear the source draft, on failure show the error. Returns true on success. */
+  commit(transform, extraState, after) {
+    try {
+      const board = transform(this.state.board);
+      this.setState({ board, now: Date.now(), sourceDraft: null, parseError: null, opError: null, saveStatus: this.persistBoard(board), ...(extraState ?? {}) }, after);
+      return true;
+    } catch (err) {
+      this.setState({ opError: err.message });
+      return false;
+    }
+  }
+  /** Edit a text field with a draft: the input always shows what was typed; the board updates whenever the value is valid. */
+  editField(key, raw, transform, after) {
+    const drafts = { ...this.state.drafts, [key]: raw };
+    try {
+      const board = transform(this.state.board);
+      const fieldErrors = { ...this.state.fieldErrors };
+      delete fieldErrors[key];
+      this.setState({ board, drafts, fieldErrors, sourceDraft: null, parseError: null, saveStatus: this.persistBoard(board) }, after);
+    } catch (err) {
+      this.setState({ drafts, fieldErrors: { ...this.state.fieldErrors, [key]: err.message.replace(/^board(\.[\w[\]]+)*: /, '') } }, after);
+    }
+  }
+
+  openTask(id) { this.setState({ editingTaskId: id, tagInput: '', drafts: {}, fieldErrors: {}, pickerOpen: false, historyOpen: false }); }
+
+  /* ---- description editor (toolbar, shortcuts, list continuation) ---- */
+  setDescription(taskId, res) {
+    this.editField(`task.${taskId}.description`, res.text, (b) => updateTask(b, taskId, { description: res.text }), () => {
+      const el = document.querySelector(`[data-kb-desc="${this.uid}"]`);
+      if (el === null) return; // the panel was closed before the update landed
+      el.focus();
+      el.setSelectionRange(res.start, res.end);
+    });
+  }
+  formatDescription(taskId, kind) {
+    const el = document.querySelector(`[data-kb-desc="${this.uid}"]`);
+    if (el === null) bug('format button pressed with no description editor on screen');
+    this.setDescription(taskId, applyFormat(el.value, el.selectionStart, el.selectionEnd, kind));
+  }
+  handleDescriptionKey(e, taskId) {
+    const el = e.target;
+    const key = e.key.toLowerCase();
+    if ((e.metaKey || e.ctrlKey) && !e.altKey) {
+      const kind = e.shiftKey ? (key === 'x' ? 'strike' : null) : ({ b: 'bold', i: 'italic', e: 'code', k: 'link' })[key] ?? null;
+      if (kind === null) return;
+      e.preventDefault();
+      this.setDescription(taskId, applyFormat(el.value, el.selectionStart, el.selectionEnd, kind));
+      return;
+    }
+    if (e.key === 'Enter' && !e.shiftKey && !e.altKey) {
+      const res = continueList(el.value, el.selectionStart, el.selectionEnd);
+      if (res === null) return;
+      e.preventDefault();
+      this.setDescription(taskId, res);
+    }
+  }
+  endField(key) {
+    const drafts = { ...this.state.drafts };
+    const fieldErrors = { ...this.state.fieldErrors };
+    delete drafts[key];
+    delete fieldErrors[key];
+    this.setState({ drafts, fieldErrors });
+  }
+
+  /* ---- pointer drag (tasks and columns) ---- */
+  beginDrag(e, kind, id, el) {
+    if (e.button !== 0) return;
+    if (this.state.parseError !== null) return;
+    const geo = this.geometry();
+    const p = { x: (e.clientX - geo.left) / geo.scale, y: (e.clientY - geo.top) / geo.scale };
+    const r = geo.local(el.getBoundingClientRect());
+    this.setState({ drag: { kind, id, pointerId: e.pointerId, startX: p.x, startY: p.y, x: p.x, y: p.y, offX: p.x - r.x, offY: p.y - r.y, w: r.w, h: r.h, active: false, target: null } });
+  }
+  handlePointerMove(e) {
+    const d = this.state.drag;
+    if (d === null || e.pointerId !== d.pointerId) return;
+    const geo = this.geometry();
+    const x = (e.clientX - geo.left) / geo.scale;
+    const y = (e.clientY - geo.top) / geo.scale;
+    const active = d.active || Math.hypot(x - d.startX, y - d.startY) > 5;
+    if (!active) return;
+    const target = d.kind === 'task' ? this.taskTarget(geo, x, y) : this.columnTarget(geo, x);
+    this.setState({ drag: { ...d, x, y, active, target } });
+  }
+  taskTarget(geo, x, y) {
+    const cols = Array.from(geo.root.querySelectorAll('[data-col-drop]')).map((el) => ({ id: el.getAttribute('data-col-drop'), el, r: geo.local(el.getBoundingClientRect()) }));
+    if (cols.length === 0) return null;
+    const best = cols.reduce((a, c) => {
+      const dist = x < c.r.x ? c.r.x - x : x > c.r.x + c.r.w ? x - (c.r.x + c.r.w) : 0;
+      return dist < a.dist ? { c, dist } : a;
+    }, { c: null, dist: Infinity }).c;
+    const cards = Array.from(best.el.querySelectorAll('[data-card-slot]')).map((el) => ({ id: el.getAttribute('data-card-slot'), r: geo.local(el.getBoundingClientRect()) }));
+    const before = cards.find((c) => y < c.r.y + c.r.h / 2);
+    return { colId: best.id, beforeId: before === undefined ? null : before.id };
+  }
+  columnTarget(geo, x) {
+    const cols = Array.from(geo.root.querySelectorAll('[data-col-drop]')).map((el) => ({ id: el.getAttribute('data-col-drop'), r: geo.local(el.getBoundingClientRect()) }));
+    const before = cols.find((c) => x < c.r.x + c.r.w / 2);
+    return { beforeId: before === undefined ? null : before.id };
+  }
+  handlePointerUp(e) {
+    const d = this.state.drag;
+    if (d === null || e.pointerId !== d.pointerId) return;
+    if (!d.active || d.target === null) { this.setState({ drag: null }); return; }
+    this.suppressClick = true;
+    window.setTimeout(() => { this.suppressClick = false; }, 0);
+    const at = this.nowIso();
+    if (d.kind === 'task') {
+      this.commit((b) => moveTask(b, d.id, d.target.colId, d.target.beforeId, at), { drag: null });
+    }
+    else if (d.kind === 'column') this.commit((b) => moveColumn(b, d.id, d.target.beforeId), { drag: null });
+    else bug(`drag kind "${d.kind}"`);
+  }
+
+  /* ---- render ---- */
+  renderVals() {
+    const s = this.state;
+    const theme = themeById(s.board.settings.theme);
+    const settings = s.board.settings.themes[theme.id];
+    const board = s.board;
+    const filter = { query: s.query, tags: s.tagFilter, owners: s.ownerFilter };
+    const drag = s.drag !== null && s.drag.active ? s.drag : null;
+
+    const everyTask = allTasks(board);
+    const allTags = [...new Set(everyTask.flatMap((t) => t.tags))].sort((a, b) => a.localeCompare(b));
+    const allOwners = [...new Set(everyTask.map((t) => t.owner))].sort((a, b) => (a === '' ? 1 : b === '' ? -1 : a.localeCompare(b)));
+    const tagStyle = (tag) => `background: oklch(var(--tag-l) var(--tag-c) ${hueOf(tag)}); color: var(--tag-fg)`;
+    const tagPills = (tags) => tags.map((t) => ({ label: t, style: tagStyle(t) }));
+    const cardView = (t, interactive) => ({
+      id: t.id, title: t.title, hasDescription: t.description !== '',
+      descClass: t.description.split('\n').length > 5 || t.description.length > 220 ? 'kb-card-desc md kb-desc-long' : 'kb-card-desc md',
+      desc: t.description === '' ? [] : markdownView(t.description, {
+        links: false,
+        onToggle: interactive
+          ? (line) => this.commit((b) => updateTask(b, t.id, { description: toggleCheckLine(findTask(b, t.id).task.description, line) }))
+          : (line) => bug(`checkbox clicked on a drag preview (line ${line})`),
+      }),
+      owner: t.owner, hasOwner: t.owner !== '', initials: initialsOf(t.owner), avatarStyle: tagStyle(t.owner),
+      tags: tagPills(t.tags), hasFoot: t.owner !== '' || t.tags.length > 0,
+    });
+
+    const filterActive = s.query.trim() !== '' || s.tagFilter.length > 0 || s.ownerFilter.length > 0;
+    const placeholder = (w, h) => ({ isPlaceholder: true, isTask: false, isColumn: false, phStyle: `height: ${Math.round(h)}px; min-height: ${Math.round(h)}px` + (w === null ? '' : `; width: ${Math.round(w)}px`) });
+
+    const columnViews = board.columns.flatMap((col) => {
+      if (drag !== null && drag.kind === 'column' && drag.id === col.id) return [];
+      const visible = col.tasks.filter((t) => taskMatches(t, filter));
+      const shown = visible.filter((t) => !(drag !== null && drag.kind === 'task' && drag.id === t.id));
+      const items = shown.map((t) => ({
+        ...cardView(t, true), isPlaceholder: false, isTask: true, obstacleId: `card:${t.id}`,
+        cardClass: s.fresh !== null && s.fresh.id === t.id ? `kb-card ${s.fresh.cls}` : 'kb-card',
+        onPointerDown: (e) => {
+          if (e.target instanceof Element && e.target.closest('input,textarea,select') !== null) return;
+          this.beginDrag(e, 'task', t.id, e.currentTarget);
+        },
+        open: () => { if (!this.suppressClick) this.openTask(t.id); },
+      }));
+      if (drag !== null && drag.kind === 'task' && drag.target !== null && drag.target.colId === col.id) {
+        const idx = drag.target.beforeId === null ? items.length : items.findIndex((it) => it.id === drag.target.beforeId);
+        items.splice(idx < 0 ? items.length : idx, 0, placeholder(null, drag.h));
+      }
+      const nameKey = `col.${col.id}.name`;
+      const hidden = col.tasks.length - visible.length;
+      const view = {
+        isPlaceholder: false, isColumn: true, id: col.id,
+        nameValue: nameKey in s.drafts ? s.drafts[nameKey] : col.name,
+        nameError: s.fieldErrors[nameKey] ?? null,
+        countLabel: hidden > 0 ? `${visible.length}/${col.tasks.length}` : String(col.tasks.length),
+        gripLabel: `Drag column ${col.name}`,
+        deleteLabel: `Delete column ${col.name}`,
+        deleteDisabled: col.tasks.length > 0,
+        deleteTitle: col.tasks.length > 0 ? 'Move or delete its tasks first' : `Delete ${col.name}`,
+        items,
+        showEmpty: items.length === 0,
+        emptyLabel: col.tasks.length === 0 ? 'No tasks' : 'No tasks match the filters',
+        onGrip: (e) => { e.preventDefault(); this.beginDrag(e, 'column', col.id, e.currentTarget.closest('[data-col-drop]')); },
+        onName: (e) => { const raw = e.target.value; this.editField(nameKey, raw, (b) => renameColumn(b, col.id, raw.trim())); },
+        onNameBlur: () => this.endField(nameKey),
+        onDelete: () => this.commit((b) => deleteColumn(b, col.id)),
+        onAddTask: () => {
+          const at = this.nowIso();
+          const kind = this.pickEffect('create');
+          let created = null;
+          const ok = this.commit((b) => { created = addTask(b, col.id, 'New task', at); return created.board; });
+          if (!ok) return;
+          const id = created.id;
+          this.setState({ editingTaskId: id, drafts: {}, fieldErrors: {}, tagInput: '', pickerOpen: false, historyOpen: false, fresh: kind === null ? null : { id, cls: ENTRY_CLASS[kind] } }, () => {
+            // A filter can hide the new card; then there is nothing on screen to animate and only the panel opens.
+            const rect = this.cardRect(id);
+            if (rect !== null) this.playEffect(kind, rect);
+            window.setTimeout(() => { if (this.state.fresh !== null && this.state.fresh.id === id) this.setState({ fresh: null }); }, 1000);
+          });
+        },
+      };
+      return [view];
+    });
+    if (drag !== null && drag.kind === 'column' && drag.target !== null) {
+      const idx = drag.target.beforeId === null ? columnViews.length : columnViews.findIndex((c) => c.id === drag.target.beforeId);
+      columnViews.splice(idx < 0 ? columnViews.length : idx, 0, placeholder(drag.w, drag.h));
+    }
+
+    let ghost = { isTask: false, isColumn: false };
+    if (drag !== null && drag.kind === 'task') {
+      const { task } = findTask(board, drag.id);
+      ghost = { ...cardView(task, false), isTask: true, isColumn: false, obstacleId: `drag:${task.id}` };
+    } else if (drag !== null && drag.kind === 'column') {
+      const col = findColumn(board, drag.id);
+      ghost = { isTask: false, isColumn: true, name: col.name, countLabel: String(col.tasks.length), obstacleId: `drag:${col.id}` };
+    }
+
+    // c is the task's column, or null while it sits in the archive.
+    const editingTask = s.editingTaskId === null || !everyTask.some((t) => t.id === s.editingTaskId) ? null : (({ task, col }) => ({ t: task, c: col }))(findTask(board, s.editingTaskId));
+    let editor = null;
+    if (editingTask !== null) {
+      const { t, c } = editingTask;
+      const summary = historySummary(t, s.now);
+      const k = (f) => `task.${t.id}.${f}`;
+      const field = (f) => (k(f) in s.drafts ? s.drafts[k(f)] : t[f]);
+      const descText = field('description');
+      editor = {
+        isWrite: s.descTab === 'write',
+        isPreview: s.descTab === 'preview',
+        showWrite: () => this.setState({ descTab: 'write' }),
+        showPreview: () => this.setState({ descTab: 'preview' }),
+        formatButtons: FORMAT_BUTTONS.map((fb) => ({
+          label: fb.label, d: fb.d,
+          title: fb.keys === '' ? fb.label : `${fb.label} (${fb.keys})`,
+          cls: fb.sep === true ? 'kb-fmt kb-fmt-sep' : 'kb-fmt',
+          keepFocus: (e) => e.preventDefault(),
+          apply: () => this.formatDescription(t.id, fb.kind),
+        })),
+        onDescriptionKey: (e) => this.handleDescriptionKey(e, t.id),
+        preview: markdownView(descText, {
+          links: true,
+          onToggle: (line) => { const next = toggleCheckLine(descText, line); this.editField(k('description'), next, (b) => updateTask(b, t.id, { description: next })); },
+        }),
+        previewEmpty: descText.trim() === '',
+        id: t.id, columnName: c === null ? 'Archive' : c.name,
+        title: field('title'), owner: field('owner'), description: field('description'),
+        titleError: s.fieldErrors[k('title')] ?? null, ownerError: s.fieldErrors[k('owner')] ?? null, descriptionError: s.fieldErrors[k('description')] ?? null,
+        onTitle: (e) => { const raw = e.target.value; this.editField(k('title'), raw, (b) => updateTask(b, t.id, { title: raw.trim() })); },
+        // Owner is a draft while typing and is committed once (blur or Enter), so each handover is one history entry.
+        onOwner: (e) => {
+          const raw = e.target.value;
+          let error = null;
+          try { check(OwnerName, normalizeOwner(raw), 'owner'); } catch (err) { error = err.message.replace(/^owner: /, ''); }
+          const fieldErrors = { ...this.state.fieldErrors };
+          if (error === null) delete fieldErrors[k('owner')]; else fieldErrors[k('owner')] = error;
+          this.setState({ drafts: { ...this.state.drafts, [k('owner')]: raw }, fieldErrors });
+        },
+        onOwnerKey: (e) => { if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); } },
+        onDescription: (e) => { const raw = e.target.value; this.editField(k('description'), raw, (b) => updateTask(b, t.id, { description: raw })); },
+        onBlurTitle: () => this.endField(k('title')),
+        onBlurOwner: () => {
+          const key = k('owner');
+          const raw = this.state.drafts[key];
+          if (raw !== undefined && this.state.fieldErrors[key] === undefined) {
+            const at = this.nowIso();
+            this.commit((b) => reassignTask(b, t.id, normalizeOwner(raw), at));
+          }
+          this.endField(key);
+        },
+        onBlurDescription: () => this.endField(k('description')),
+        tags: t.tags.map((tag) => ({
+          label: tag, style: tagStyle(tag), removeLabel: `Remove tag ${tag}`,
+          remove: () => this.commit((b) => updateTask(b, t.id, { tags: t.tags.filter((x) => x !== tag) })),
+        })),
+        history: historyView(t, s.now),
+        onDelete: (e) => {
+          const kind = this.pickEffect('delete');
+          // Burst where the card was; the button stands in when the card isn't on screen (filtered out, markdown view).
+          const rect = this.cardRect(t.id) ?? this.elRect(e.currentTarget);
+          if (this.commit((b) => deleteTask(b, t.id), { editingTaskId: null })) this.playEffect(kind, rect);
+        },
+        completeDisabled: c === null,
+        completeLabel: c === null ? 'Archived' : 'Mark complete',
+        completeTitle: c === null ? 'Already in the archive' : 'Moves it to the archive (see the Archive view)',
+        historyOpen: s.historyOpen,
+        toggleHistory: () => this.setState({ historyOpen: !s.historyOpen }),
+        summary,
+        onComplete: (e) => {
+          const kind = this.pickEffect('complete');
+          // The card leaves the board, so celebrate where it was (or at the button when it isn't on screen).
+          const rect = this.cardRect(t.id) ?? this.elRect(e.currentTarget);
+          const at = this.nowIso();
+          if (this.commit((b) => archiveTask(b, t.id, at), { editingTaskId: null })) this.playEffect(kind, rect);
+        },
+      };
+    }
+    const archivedViews = [...board.archive].reverse().filter((t) => taskMatches(t, filter)).map((t) => {
+      const lastPlace = [...t.history].reverse().find((h) => h.column !== 'Archive');
+      const prevCol = lastPlace === undefined ? undefined : board.columns.find((c) => c.name === lastPlace.column);
+      const chosen = s.restoreTargets[t.id];
+      // Preselect the chosen column, else the column it was archived from, else the first one.
+      const target = chosen !== undefined && board.columns.some((c) => c.id === chosen) ? chosen : (prevCol ?? board.columns[0] ?? { id: '' }).id;
+      const archivedAt = [...t.history].reverse().find((h) => h.column === 'Archive') ?? bug(`archived task ${t.id} has no Archive entry`);
+      return {
+        ...cardView(t, true),
+        completedAgo: `Completed ${formatDuration(s.now - Date.parse(archivedAt.at))} ago`,
+        restoreTo: target,
+        restoreOptions: board.columns.map((c) => ({ value: c.id, label: c.name })),
+        restoreDisabled: board.columns.length === 0,
+        restoreLabel: `Column to restore ${t.title} to`,
+        onRestoreTo: (e) => this.setState({ restoreTargets: { ...this.state.restoreTargets, [t.id]: e.target.value } }),
+        restore: () => { const at = this.nowIso(); this.commit((b) => restoreTask(b, t.id, target, at)); },
+        open: () => this.openTask(t.id),
+      };
+    });
+
+    const addTags = (raw) => {
+      if (editingTask === null) bug('adding a tag with no task open');
+      const t = editingTask.t;
+      const fresh = raw.split(',').map((x) => x.trim()).filter((x) => x !== '' && !t.tags.includes(x));
+      if (fresh.length === 0) { this.setState({ tagInput: '' }); return; }
+      if (this.commit((b) => updateTask(b, t.id, { tags: [...t.tags, ...new Set(fresh)] }))) this.setState({ tagInput: '' });
+    };
+
+    const controls = Object.entries(theme.settings).map(([key, def]) => {
+      const value = settings[key];
+      const apply = (raw) => this.commit((b) => setThemeSetting(b, theme.id, key, raw));
+      return {
+        label: def.label,
+        isRange: def.type === 'range', isColor: def.type === 'color', isSelect: def.type === 'select', isBoolean: def.type === 'boolean',
+        min: def.min, max: def.max, step: def.step,
+        value: def.type === 'boolean' ? '' : String(value), checked: def.type === 'boolean' ? value : false,
+        options: def.type === 'select' ? def.options.map((o) => ({ value: o, label: o[0].toUpperCase() + o.slice(1) })) : [],
+        valueLabel: def.type === 'range' ? `${Number(value.toFixed(3))}${def.unit ?? ''}` : def.type === 'color' ? value : '',
+        onChange: (e) => apply(def.type === 'boolean' ? e.target.checked : e.target.value),
+      };
+    });
+
+    const toggleIn = (list, v) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
+    const sourceText = s.sourceDraft !== null ? s.sourceDraft : serializeBoard(board);
+    const bodyVars = { ...BASE_VARS, ...theme.vars(settings) };
+
+    return {
+      uid: this.uid,
+      themeId: theme.id,
+      themeName: theme.name,
+      rootStyle: toStyle(bodyVars),
+      rootClass: drag !== null ? 'kb kb-dragging' : 'kb',
+      canvasClass: theme.effect === null ? 'kb-fx kb-fx-off' : 'kb-fx',
+      mainClass: `kb-main kb-mode-${s.mode}`,
+      boardClass: s.parseError !== null ? 'kb-board kb-locked' : 'kb-board',
+      ownerListId: `${this.uid}-owners`,
+      tagListId: `${this.uid}-tags`,
+
+      titleValue: 'board.title' in s.drafts ? s.drafts['board.title'] : board.title,
+      onTitle: (e) => { const raw = e.target.value; this.editField('board.title', raw, (b) => setBoardTitle(b, raw.trim())); },
+      onTitleBlur: () => this.endField('board.title'),
+
+      query: s.query,
+      onQuery: (e) => this.setState({ query: e.target.value }),
+      filterOpen: s.filterOpen,
+      toggleFilter: () => this.setState({ filterOpen: !s.filterOpen }),
+      hasActiveFilters: filterActive,
+      activeFilterCount: s.tagFilter.length + s.ownerFilter.length + (s.query.trim() !== '' ? 1 : 0),
+      tagOptions: allTags.map((tag) => ({ label: tag, style: tagStyle(tag), pressed: s.tagFilter.includes(tag), toggle: () => this.setState({ tagFilter: toggleIn(s.tagFilter, tag) }) })),
+      noTags: allTags.length === 0,
+      ownerOptions: allOwners.map((o) => ({ label: o === '' ? 'Unassigned' : o, pressed: s.ownerFilter.includes(o), toggle: () => this.setState({ ownerFilter: toggleIn(s.ownerFilter, o) }) })),
+      clearFilters: () => this.setState({ query: '', tagFilter: [], ownerFilter: [] }),
+
+      modes: MODES.map((m) => ({ label: m.label, pressed: s.mode === m.id, pick: () => this.setState({ mode: m.id }) })),
+      showBoard: s.mode === 'board' || s.mode === 'split',
+      showSource: s.mode === 'split' || s.mode === 'source',
+      showArchive: s.mode === 'archive',
+      archived: archivedViews,
+      archiveEmpty: archivedViews.length === 0,
+      archiveEmptyLabel: board.archive.length === 0 ? 'Nothing archived yet. "Mark complete" on a task sends it here.' : 'No archived tasks match the filters',
+      archiveCountLabel: board.archive.length === 1 ? '1 task' : `${board.archive.length} tasks`,
+
+      columns: columnViews,
+      addColumn: () => this.commit((b) => addColumn(b, `Column ${b.columns.length + 1}`).board),
+
+      sourceText,
+      saveStatus: s.saveStatus,
+      copyLabel: s.copyLabel,
+      hasParseError: s.parseError !== null,
+      parseError: s.parseError ?? '',
+      onSource: (e) => {
+        const text = e.target.value;
+        try {
+          const parsed = parseBoard(text);
+          this.setState({ sourceDraft: text, parseError: null, board: parsed, saveStatus: this.persistBoard(parsed), drag: null });
+        } catch (err) {
+          this.setState({ sourceDraft: text, parseError: err.message });
+        }
+      },
+      onSourceBlur: () => { if (this.state.parseError === null) this.setState({ sourceDraft: null }); },
+      copySource: () => {
+        const done = (label) => { this.setState({ copyLabel: label }); window.setTimeout(() => this.setState({ copyLabel: 'Copy' }), 1800); };
+        if (navigator.clipboard === undefined) { done('Clipboard blocked: select the text and copy'); return; }
+        navigator.clipboard.writeText(sourceText).then(() => done('Copied'), () => done('Clipboard blocked: select the text and copy'));
+      },
+
+      pickerOpen: s.pickerOpen,
+      togglePicker: () => this.setState({ pickerOpen: !s.pickerOpen }),
+      themeOptions: THEMES.map((t) => ({
+        name: t.name, blurb: t.blurb, pressed: t.id === theme.id,
+        swatch: t.swatch(board.settings.themes[t.id]).map((c) => ({ style: `background: ${c}` })),
+        pick: () => {
+          this.fxFailedFor = null;
+          this.commit((b) => setTheme(b, t.id), { effectError: null });
+        },
+      })),
+      settingControls: controls,
+      resetTheme: () => this.commit((b) => resetThemeSettings(b, theme.id)),
+      effectControls: Object.entries(EVENT_EFFECTS).map(([event, spec]) => ({
+        label: spec.label,
+        value: board.settings.effects[event],
+        options: effectChoices(event).map((o) => ({ value: o, label: EFFECT_LABELS[o] })),
+        onChange: (e) => { const v = e.target.value; this.commit((b) => setEffect(b, event, v)); },
+        tryLabel: `Try the ${spec.label.toLowerCase()} effect`,
+        tryDisabled: board.settings.effects[event] === 'none',
+        tryIt: () => {
+          const root = this.rootEl();
+          if (root === null) bug('board root missing');
+          const w = root.offsetWidth;
+          const h = root.offsetHeight;
+          this.playEffect(this.pickEffect(event), { x: w / 2 - 140, y: h / 2 - 45, w: 280, h: 90 });
+        },
+      })),
+      storageWarning: s.storageWarning,
+      effectError: s.effectError,
+
+      isDragging: drag !== null,
+      ghostStyle: drag === null ? '' : `left: ${Math.round(drag.x - drag.offX)}px; top: ${Math.round(drag.y - drag.offY)}px; width: ${Math.round(drag.w)}px`,
+      ghost,
+
+      editorOpen: editor !== null,
+      editor: editor ?? {},
+      closeEditor: () => this.setState({ editingTaskId: null, drafts: {}, fieldErrors: {}, tagInput: '' }),
+      ownerNames: allOwners.filter((o) => o !== ''),
+      tagNames: allTags,
+      tagInput: s.tagInput,
+      onTagInput: (e) => {
+        const v = e.target.value;
+        if (v.includes(',')) { addTags(v); return; }
+        this.setState({ tagInput: v });
+      },
+      onTagKey: (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); addTags(e.target.value); return; }
+        if (e.key === 'Backspace' && e.target.value === '' && editingTask !== null && editingTask.t.tags.length > 0) {
+          const t = editingTask.t;
+          this.commit((b) => updateTask(b, t.id, { tags: t.tags.slice(0, -1) }));
+        }
+      },
+
+      opError: s.opError,
+      dismissError: () => this.setState({ opError: null }),
+    };
+  }
+}
+</script>
+</body>
+</html>
