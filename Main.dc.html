@@ -197,6 +197,8 @@ body{margin:0}
 .kb[data-theme="paper"] .kb-card:nth-child(3n){transform:rotate(calc(var(--tilt) * 1deg))}
 .kb-drawer,.kb-pop,.kb-modal,.kb-menu{--control:var(--panel-control);--line:var(--panel-line)}
 .kb-menu-wrap{position:relative}
+.kb-undo{display:inline-grid;place-items:center;padding:0 9px}
+.kb-undo:disabled{opacity:.35;cursor:not-allowed}
 .kb-pop-head{display:flex;align-items:center;justify-content:space-between;margin:-6px 0}
 .kb-menu-btn{padding:0 9px}
 .kb-menu-back{position:fixed;inset:0;z-index:29}
@@ -250,6 +252,10 @@ body{margin:0}
         <sc-for list="{{modes}}" as="m" hint-placeholder-count="3">
           <button class="kb-seg-btn" aria-pressed="{{m.pressed}}" onClick="{{m.pick}}">{{m.label}}</button>
         </sc-for>
+      </div>
+      <div class="kb-seg" role="group" aria-label="History">
+        <button class="kb-seg-btn kb-undo" aria-label="Undo" title="Undo (Ctrl/⌘ Z)" disabled="{{undoDisabled}}" onClick="{{undo}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"></path><path d="M4 9h11a5 5 0 0 1 0 10h-3"></path></svg></button>
+        <button class="kb-seg-btn kb-undo" aria-label="Redo" title="Redo (Ctrl/⌘ Shift Z)" disabled="{{redoDisabled}}" onClick="{{redo}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 14 5-5-5-5"></path><path d="M20 9H9a5 5 0 0 0 0 10h3"></path></svg></button>
       </div>
       <div class="kb-menu-wrap" onKeyDown="{{menuKey}}">
         <button class="kb-btn kb-menu-btn" aria-label="Menu" aria-haspopup="menu" aria-expanded="{{menuOpen}}" onClick="{{toggleMenu}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"></path></svg></button>
@@ -2578,6 +2584,7 @@ const VIEW_PARAM = { board: 'board', split: 'split', archive: 'archive', source:
 const BLANK_MD = '# Untitled board\n\n## To Do\n\n## Doing\n\n## Done\n';
 const STORAGE_RECENTS = 'kb-recents:v1';
 const MAX_RECENTS = 8;
+const MAX_UNDO = 100;
 
 /* ---------- (6) Component: the IO edge ---------- */
 
@@ -2591,6 +2598,7 @@ class Component extends DCLogic {
     const p = Component.fromQuery(location.search);
     this.src = p.src;
     this.fileHandle = null;
+    this.lastEditKey = null; // the field last typed into: further typing there extends the same undo step
     this.pageKey = `${p.mode}|${p.task}`;
     this.state = {
       board: loaded.board,
@@ -2619,6 +2627,7 @@ class Component extends DCLogic {
       copyLabel: 'Copy',
       themeOverride: p.theme,
       menuOpen: false,
+      past: [], future: [], // undo/redo: earlier and undone boards, nearest last / first
       recents: Component.loadRecents(),
       openOpen: false, openUrl: p.src ?? '', openBusy: false, openError: null, openDragging: false,
     };
@@ -2740,7 +2749,16 @@ class Component extends DCLogic {
       this.pageKey = `${p.mode}|${p.task}`;
       this.setState({ mode: p.mode, query: p.query, tagFilter: p.tags, ownerFilter: p.owners, editingTaskId: p.task, themeOverride: p.theme });
     };
-    this.onKey = (e) => { if ((e.metaKey || e.ctrlKey) && !e.altKey && e.key.toLowerCase() === 's') { e.preventDefault(); this.save(); } };
+    this.onKey = (e) => {
+      if (!(e.metaKey || e.ctrlKey) || e.altKey) return;
+      const key = e.key.toLowerCase();
+      if (key === 's') { e.preventDefault(); this.save(); return; }
+      if (key !== 'z' && key !== 'y') return;
+      // Text fields keep the browser's own undo for what's being typed.
+      if (typeof e.target?.closest === 'function' && e.target.closest('input,textarea,select,[contenteditable]') !== null) return;
+      e.preventDefault();
+      if (key === 'y' || e.shiftKey) this.redo(); else this.undo();
+    };
     window.addEventListener('popstate', this.onPop);
     window.addEventListener('keydown', this.onKey);
     if (this.src !== null) {
@@ -2907,7 +2925,7 @@ class Component extends DCLogic {
   commit(transform, extraState, after) {
     try {
       const board = transform(this.state.board);
-      this.setState({ board, now: Date.now(), sourceDraft: null, parseError: null, opError: null, saveStatus: this.persistBoard(board), ...(extraState ?? {}) }, after);
+      this.setState({ ...this.undoStep(board, null), board, now: Date.now(), sourceDraft: null, parseError: null, opError: null, saveStatus: this.persistBoard(board), ...(extraState ?? {}) }, after);
       return true;
     } catch (err) {
       this.setState({ opError: err.message });
@@ -2921,11 +2939,34 @@ class Component extends DCLogic {
       const board = transform(this.state.board);
       const fieldErrors = { ...this.state.fieldErrors };
       delete fieldErrors[key];
-      this.setState({ board, drafts, fieldErrors, sourceDraft: null, parseError: null, saveStatus: this.persistBoard(board) }, after);
+      this.setState({ ...this.undoStep(board, key), board, drafts, fieldErrors, sourceDraft: null, parseError: null, saveStatus: this.persistBoard(board) }, after);
     } catch (err) {
       this.setState({ drafts, fieldErrors: { ...this.state.fieldErrors, [key]: err.message.replace(/^board(\.[\w[\]]+)*: /, '') } }, after);
     }
   }
+
+  /* ---- undo / redo ---- */
+  /** State patch recording the board that `board` replaces. Repeated typing in one field (same key) stays one step. */
+  undoStep(board, key) {
+    const s = this.state;
+    if (board === s.board) return {};
+    const extend = key !== null && key === this.lastEditKey;
+    this.lastEditKey = key;
+    return extend ? { future: [] } : { past: [...s.past, s.board].slice(-MAX_UNDO), future: [] };
+  }
+  /** Moves one step back (dir -1) or forward (+1). Field drafts are dropped so inputs show the restored board. */
+  travel(dir) {
+    const s = this.state;
+    const from = dir < 0 ? s.past : s.future;
+    if (from.length === 0) return;
+    const board = dir < 0 ? from[from.length - 1] : from[0];
+    const past = dir < 0 ? s.past.slice(0, -1) : [...s.past, s.board];
+    const future = dir < 0 ? [s.board, ...s.future] : s.future.slice(1);
+    this.lastEditKey = null;
+    this.setState({ board, past, future, saveStatus: this.persistBoard(board), sourceDraft: null, parseError: null, drafts: {}, fieldErrors: {}, drag: null, now: Date.now() });
+  }
+  undo() { this.travel(-1); }
+  redo() { this.travel(1); }
 
   /* ---- open, save, download ---- */
   openFile(file) {
@@ -2962,7 +3003,8 @@ class Component extends DCLogic {
     const same = (r) => (recent.url !== undefined ? r.url === recent.url : r.url === undefined && r.name === recent.name);
     const recents = [recent, ...this.state.recents.filter((r) => !same(r))].slice(0, MAX_RECENTS);
     try { window.localStorage.setItem(STORAGE_RECENTS, JSON.stringify(recents)); } catch (err) { /* blocked storage: recents last this session only */ }
-    this.setState({ board, recents, saveStatus: this.persistBoard(board), sourceDraft: null, parseError: null, drag: null, now: Date.now(), openOpen: false, openError: null, openDragging: false });
+    this.lastEditKey = null;
+    this.setState({ board, recents, past: [], future: [], saveStatus: this.persistBoard(board), sourceDraft: null, parseError: null, drag: null, now: Date.now(), openOpen: false, openError: null, openDragging: false });
   }
   newBoard() {
     const ok = window.confirm(this.src === null
@@ -2972,7 +3014,8 @@ class Component extends DCLogic {
     const board = validateBoard({ ...parseBoard(BLANK_MD), settings: this.state.board.settings });
     this.src = null;
     this.fileHandle = null;
-    this.setState({ board, saveStatus: this.persistBoard(board), sourceDraft: null, parseError: null, drag: null, editingTaskId: null, now: Date.now() });
+    this.lastEditKey = null;
+    this.setState({ board, past: [], future: [], saveStatus: this.persistBoard(board), sourceDraft: null, parseError: null, drag: null, editingTaskId: null, now: Date.now() });
   }
   fileName() { return (this.state.board.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'board') + '.md'; }
   download() {
@@ -3036,6 +3079,7 @@ class Component extends DCLogic {
     }
   }
   endField(key) {
+    this.lastEditKey = null;
     const drafts = { ...this.state.drafts };
     const fieldErrors = { ...this.state.fieldErrors };
     delete drafts[key];
@@ -3373,12 +3417,12 @@ class Component extends DCLogic {
         const text = e.target.value;
         try {
           const parsed = parseBoard(text);
-          this.setState({ sourceDraft: text, parseError: null, board: parsed, saveStatus: this.persistBoard(parsed), drag: null });
+          this.setState({ ...this.undoStep(parsed, 'source'), sourceDraft: text, parseError: null, board: parsed, saveStatus: this.persistBoard(parsed), drag: null });
         } catch (err) {
           this.setState({ sourceDraft: text, parseError: err.message });
         }
       },
-      onSourceBlur: () => { if (this.state.parseError === null) this.setState({ sourceDraft: null }); },
+      onSourceBlur: () => { this.lastEditKey = null; if (this.state.parseError === null) this.setState({ sourceDraft: null }); },
       copySource: () => {
         const done = (label) => { this.setState({ copyLabel: label }); window.setTimeout(() => this.setState({ copyLabel: 'Copy' }), 1800); };
         if (navigator.clipboard === undefined) { done('Clipboard blocked: select the text and copy'); return; }
@@ -3442,6 +3486,12 @@ class Component extends DCLogic {
       opError: s.opError,
       dismissError: () => this.setState({ opError: null }),
 
+      canUndo: s.past.length > 0,
+      canRedo: s.future.length > 0,
+      undoDisabled: s.past.length === 0,
+      redoDisabled: s.future.length === 0,
+      undo: () => this.undo(),
+      redo: () => this.redo(),
       menuOpen: s.menuOpen,
       toggleMenu: () => this.setState({ menuOpen: !s.menuOpen }),
       closeMenu: () => this.setState({ menuOpen: false }),

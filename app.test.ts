@@ -192,3 +192,52 @@ test("Enter in the task title closes the drawer, unless the title is invalid", (
   expect([c.state.editingTaskId, prevented]).toEqual([null, 2]);
   expect(c.state.board.columns.flatMap((col: any) => col.tasks).find((t: any) => t.id === "t-01").title).toBe("Renamed");
 });
+
+test("undo and redo step through board changes; typing in one field is one step", () => {
+  const store: Store = {};
+  const { make } = load("", store);
+  const c = make();
+  const v = () => c.renderVals();
+  const title = () => c.state.board.title;
+  expect([v().canUndo, v().canRedo]).toEqual([false, false]);
+  for (const t of ["S", "Sp", "Spr"]) v().onTitle({ target: { value: t } });
+  v().onTitleBlur();
+  v().addColumn();
+  const cols = c.state.board.columns.length;
+  v().undo();
+  expect([c.state.board.columns.length, title()]).toEqual([cols - 1, "Spr"]);
+  v().undo();
+  expect(title()).toBe("Sprint 14");
+  expect(store[KEYS.board]).toContain("# Sprint 14");
+  expect([v().canUndo, v().canRedo]).toEqual([false, true]);
+  v().undo();                                                    // nothing left: no change
+  expect(title()).toBe("Sprint 14");
+  v().redo(); v().redo();
+  expect([title(), c.state.board.columns.length, v().canRedo]).toEqual(["Spr", cols, false]);
+  v().undo(); v().onTitle({ target: { value: "Other" } });       // a new change drops the redo steps
+  expect(v().canRedo).toBe(false);
+});
+
+test("Ctrl/⌘ Z and Shift+Z (or Ctrl Y) undo and redo, but leave text fields their own undo", () => {
+  const { make, g } = load();
+  let onKey: any = null;
+  g.addEventListener = (type: string, f: any) => { if (type === "keydown") onKey = f; };
+  const c = make();
+  c.renderVals().addColumn();
+  const n = c.state.board.columns.length;
+  const press = (key: string, o: any = {}) => onKey({ key, metaKey: true, ctrlKey: false, shiftKey: false, altKey: false, target: { closest: () => null }, preventDefault() {}, ...o });
+  press("z", { target: { closest: () => ({}) } });
+  expect(c.state.board.columns.length).toBe(n);
+  press("z"); expect(c.state.board.columns.length).toBe(n - 1);
+  press("Z", { shiftKey: true }); expect(c.state.board.columns.length).toBe(n);
+  press("z"); press("y", { metaKey: false, ctrlKey: true }); expect(c.state.board.columns.length).toBe(n);
+});
+
+test("opening a board or starting a new one clears the undo history", async () => {
+  const c = load().make();
+  c.renderVals().addColumn();
+  c.openFile(new File([other], "o.md")); await Bun.sleep(5);
+  expect([c.renderVals().canUndo, c.renderVals().canRedo]).toEqual([false, false]);
+  c.renderVals().addColumn(); c.newBoard();
+  expect(c.renderVals().canUndo).toBe(false);
+});
