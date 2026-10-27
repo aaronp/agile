@@ -195,6 +195,15 @@ body{margin:0}
 .kb[data-theme="paper"] .kb-card:nth-child(3n+1){transform:rotate(calc(var(--tilt) * -1deg))}
 .kb[data-theme="paper"] .kb-card:nth-child(3n+2){transform:rotate(calc(var(--tilt) * .6deg))}
 .kb[data-theme="paper"] .kb-card:nth-child(3n){transform:rotate(calc(var(--tilt) * 1deg))}
+.kb-drawer,.kb-pop,.kb-modal,.kb-menu{--control:var(--panel-control);--line:var(--panel-line)}
+.kb-menu-wrap{position:relative}
+.kb-pop-head{display:flex;align-items:center;justify-content:space-between;margin:-6px 0}
+.kb-menu-btn{padding:0 9px}
+.kb-menu-back{position:fixed;inset:0;z-index:29}
+.kb-menu{position:absolute;z-index:30;top:calc(100% + 6px);right:0;min-width:220px;display:flex;flex-direction:column;padding:6px;border-radius:calc(var(--radius) + 4px);background:var(--panel);color:var(--panel-fg);border:1px solid var(--line);box-shadow:0 20px 50px rgba(0,0,0,.22)}
+.kb-menu-item{display:flex;align-items:baseline;justify-content:space-between;gap:16px;padding:8px 10px;border:0;border-radius:var(--radius);background:transparent;cursor:pointer;text-align:left}
+.kb-menu-item:hover,.kb-menu-item:focus-visible{background:var(--control)}
+.kb-menu-item small{color:var(--panel-muted);font-size:11px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .kb-src{font-family:var(--mono);font-size:11px;padding:3px 8px;border:1px dashed var(--line);border-radius:var(--radius);color:var(--muted);white-space:nowrap;cursor:help}
 .kb-btn-primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
 .kb-btn:disabled{opacity:.5;cursor:not-allowed}
@@ -242,13 +251,17 @@ body{margin:0}
           <button class="kb-seg-btn" aria-pressed="{{m.pressed}}" onClick="{{m.pick}}">{{m.label}}</button>
         </sc-for>
       </div>
-      <button class="kb-btn" aria-expanded="{{pickerOpen}}" onClick="{{togglePicker}}">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 3a9 9 0 0 0 0 18c1.5 0 2-1 2-2s-1-1.5-1-2.5 1-1.5 2-1.5h2a4 4 0 0 0 4-4c0-4.4-4-8-9-8z"></path><circle cx="7.5" cy="11" r="1"></circle><circle cx="10" cy="7" r="1"></circle><circle cx="15" cy="7" r="1"></circle></svg>
-        <span>{{themeName}}</span>
-      </button>
-      <button class="kb-btn" onClick="{{showOpen}}" title="Open a board from a file or URL"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg><span>Open</span></button>
-      <button class="kb-btn" onClick="{{save}}" title="Save to a file (Ctrl/⌘ S)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3h11l3 3v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"></path><path d="M7 3v5h8V3M7 21v-7h10v7"></path></svg><span>Save</span></button>
-      <button class="kb-btn" onClick="{{download}}" title="Download {{fileName}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m-4-4 4 4 4-4M4 19h16"></path></svg><span>Download</span></button>
+      <div class="kb-menu-wrap" onKeyDown="{{menuKey}}">
+        <button class="kb-btn kb-menu-btn" aria-label="Menu" aria-haspopup="menu" aria-expanded="{{menuOpen}}" onClick="{{toggleMenu}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"></path></svg></button>
+        <sc-if value="{{menuOpen}}" hint-placeholder-val="{{ false }}">
+          <div class="kb-menu-back" onClick="{{closeMenu}}"></div>
+          <div class="kb-menu" role="menu">
+            <sc-for list="{{menuItems}}" as="mi" hint-placeholder-count="5">
+              <button class="kb-menu-item" role="menuitem" onClick="{{mi.pick}}"><span>{{mi.label}}</span><small>{{mi.hint}}</small></button>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
     </div>
     <sc-if value="{{filterOpen}}" hint-placeholder-val="{{ false }}">
       <div class="kb-filters">
@@ -390,8 +403,8 @@ body{margin:0}
   </main>
 
   <sc-if value="{{pickerOpen}}" hint-placeholder-val="{{ false }}">
-    <div class="kb-pop" role="dialog" aria-label="Style">
-      <h2>Style</h2>
+    <div class="kb-pop" role="dialog" aria-label="Style" onKeyDown="{{pickerKey}}">
+      <div class="kb-pop-head"><h2>Style</h2><button class="kb-icon" aria-label="Close style settings" onClick="{{closePicker}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button></div>
       <div class="kb-themes">
         <sc-for list="{{themeOptions}}" as="t" hint-placeholder-count="5">
           <button class="kb-theme" aria-pressed="{{t.pressed}}" onClick="{{t.pick}}">
@@ -461,7 +474,7 @@ body{margin:0}
       </div>
       <label class="kb-field">
         <span>Title</span>
-        <input value="{{editor.title}}" onChange="{{editor.onTitle}}" onBlur="{{editor.onBlurTitle}}">
+        <input data-kb-title="{{uid}}" value="{{editor.title}}" onChange="{{editor.onTitle}}" onBlur="{{editor.onBlurTitle}}" onKeyDown="{{editor.onTitleKey}}">
       </label>
       <sc-if value="{{editor.titleError}}" hint-placeholder-val="{{ false }}"><p class="kb-field-error">{{editor.titleError}}</p></sc-if>
       <label class="kb-field">
@@ -1465,6 +1478,8 @@ const BASE_VARS = {
   '--font': FONT_SANS, '--font-title': FONT_SANS, '--mono': FONT_MONO,
   '--glow': 'none', '--header-blur': 'none', '--card-blur': 'none',
   '--col-w': '296px', '--col-gap': '14px', '--col-border': '1px solid transparent',
+  // Controls and borders on panels (drawer, style, dialogs); a theme whose panel differs from its board sets its own.
+  '--panel-control': 'var(--control)', '--panel-line': 'var(--line)',
   '--col-head-shadow': 'none', '--danger-bg': '#fde8e8', '--danger-fg': '#9b1c1c', '--tilt': '0', '--code-bg': 'rgba(127,127,127,.16)',
 };
 
@@ -1565,6 +1580,7 @@ const THEMES = [
       '--card': `rgba(248,252,254,${s.glass})`, '--card-fg': '#0b2533', '--card-muted': '#36505d', '--card-border': 'rgba(255,255,255,.6)',
       '--card-shadow': '0 6px 18px rgba(0,20,35,.25)', '--card-shadow-hover': '0 10px 26px rgba(0,20,35,.35)', '--card-blur': 'blur(8px)',
       '--header-bg': 'rgba(3,22,34,.45)', '--header-blur': 'blur(10px)', '--panel': '#f6fbfd', '--panel-fg': '#0b2533', '--panel-muted': '#3e5a68',
+      '--panel-control': '#ffffff', '--panel-line': 'rgba(11,37,51,.18)',
       '--source-bg': 'rgba(3,22,34,.72)', '--placeholder': 'rgba(255,255,255,.12)', '--col-head-fg': '#ffffff', '--col-head-shadow': '0 1px 3px rgba(0,0,0,.5)',
       '--accent': '#7fe3ff', '--accent-fg': '#04202e', '--radius': '10px',
       '--pad': '12px', '--gap': '10px', '--col-pad': '10px', '--card-title-size': '14px',
@@ -2558,6 +2574,8 @@ const MODES = [{ id: 'board', label: 'Board' }, { id: 'split', label: 'Split' },
 /** How each mode is spelled in ?view=. */
 const VIEW_PARAM = { board: 'board', split: 'split', archive: 'archive', source: 'markdown' };
 /** Files and URLs opened from the Open dialog, newest first: { name, url } or { name, md } (a file's text, since its handle can't be stored). */
+/** What New starts from (it keeps the current style). */
+const BLANK_MD = '# Untitled board\n\n## To Do\n\n## Doing\n\n## Done\n';
 const STORAGE_RECENTS = 'kb-recents:v1';
 const MAX_RECENTS = 8;
 
@@ -2600,6 +2618,7 @@ class Component extends DCLogic {
       effectError: null,
       copyLabel: 'Copy',
       themeOverride: p.theme,
+      menuOpen: false,
       recents: Component.loadRecents(),
       openOpen: false, openUrl: p.src ?? '', openBusy: false, openError: null, openDragging: false,
     };
@@ -2945,6 +2964,16 @@ class Component extends DCLogic {
     try { window.localStorage.setItem(STORAGE_RECENTS, JSON.stringify(recents)); } catch (err) { /* blocked storage: recents last this session only */ }
     this.setState({ board, recents, saveStatus: this.persistBoard(board), sourceDraft: null, parseError: null, drag: null, now: Date.now(), openOpen: false, openError: null, openDragging: false });
   }
+  newBoard() {
+    const ok = window.confirm(this.src === null
+      ? 'Start a new board? It replaces the board saved in this browser, so Save or Download this one first to keep it.'
+      : "Start a new board? Changes to this one that you haven't saved or downloaded will be lost.");
+    if (!ok) return;
+    const board = validateBoard({ ...parseBoard(BLANK_MD), settings: this.state.board.settings });
+    this.src = null;
+    this.fileHandle = null;
+    this.setState({ board, saveStatus: this.persistBoard(board), sourceDraft: null, parseError: null, drag: null, editingTaskId: null, now: Date.now() });
+  }
   fileName() { return (this.state.board.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'board') + '.md'; }
   download() {
     const name = this.fileName();
@@ -3137,6 +3166,11 @@ class Component extends DCLogic {
           if (!ok) return;
           const id = created.id;
           this.setState({ editingTaskId: id, drafts: {}, fieldErrors: {}, tagInput: '', pickerOpen: false, historyOpen: false, fresh: kind === null ? null : { id, cls: ENTRY_CLASS[kind] } }, () => {
+            // Focus the title with its placeholder text selected, so typing replaces it (next frame: the panel has rendered by then).
+            window.requestAnimationFrame(() => {
+              const input = document.querySelector(`[data-kb-title="${this.uid}"]`);
+              if (input !== null) { input.focus(); input.select(); }
+            });
             // A filter can hide the new card; then there is nothing on screen to animate and only the panel opens.
             const rect = this.cardRect(id);
             if (rect !== null) this.playEffect(kind, rect);
@@ -3203,6 +3237,12 @@ class Component extends DCLogic {
         onOwnerKey: (e) => { if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); } },
         onDescription: (e) => { const raw = e.target.value; this.editField(k('description'), raw, (b) => updateTask(b, t.id, { description: raw })); },
         onBlurTitle: () => this.endField(k('title')),
+        // Enter closes the drawer, once the title is valid (an invalid one stays open with its error).
+        onTitleKey: (e) => {
+          if (e.key !== 'Enter') return;
+          e.preventDefault();
+          if (!(k('title') in this.state.fieldErrors)) this.setState({ editingTaskId: null, drafts: {}, fieldErrors: {}, tagInput: '' });
+        },
         onBlurOwner: () => {
           const key = k('owner');
           const raw = this.state.drafts[key];
@@ -3346,7 +3386,8 @@ class Component extends DCLogic {
       },
 
       pickerOpen: s.pickerOpen,
-      togglePicker: () => this.setState({ pickerOpen: !s.pickerOpen }),
+      closePicker: () => this.setState({ pickerOpen: false }),
+      pickerKey: (e) => { if (e.key === 'Escape') this.setState({ pickerOpen: false }); },
       themeOptions: THEMES.map((t) => ({
         name: t.name, blurb: t.blurb, pressed: t.id === theme.id,
         swatch: t.swatch(board.settings.themes[t.id]).map((c) => ({ style: `background: ${c}` })),
@@ -3401,6 +3442,17 @@ class Component extends DCLogic {
       opError: s.opError,
       dismissError: () => this.setState({ opError: null }),
 
+      menuOpen: s.menuOpen,
+      toggleMenu: () => this.setState({ menuOpen: !s.menuOpen }),
+      closeMenu: () => this.setState({ menuOpen: false }),
+      menuKey: (e) => { if (e.key === 'Escape') this.setState({ menuOpen: false }); },
+      menuItems: [
+        { label: 'New', hint: 'Blank board', run: () => this.newBoard() },
+        { label: 'Open…', hint: 'File, URL or recent', run: () => this.setState({ openOpen: true, openError: null, pickerOpen: false }) },
+        { label: 'Save', hint: 'Ctrl/⌘ S', run: () => this.save() },
+        { label: 'Download', hint: this.fileName(), run: () => this.download() },
+        { label: 'Style', hint: theme.name, run: () => this.setState({ pickerOpen: true }) },
+      ].map((m) => ({ label: m.label, hint: m.hint, pick: () => { this.setState({ menuOpen: false }); m.run(); } })),
       fromSrc: this.src !== null,
       srcName: this.src === null ? '' : this.src.split('/').pop(),
       srcTitle: this.src === null ? '' : `Opened from ${this.src}. Changes aren't saved in this browser: use Save or Download.`,

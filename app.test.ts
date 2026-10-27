@@ -17,14 +17,14 @@ function load(search = "", store: Store = {}, fetch?: (u: string) => Response) {
       pushState(_s: any, _t: string, u: string) { this.entries.push(u); g.location.search = u.includes("?") ? "?" + u.split("?")[1] : ""; },
       replaceState(_s: any, _t: string, u: string) { g.location.search = u.includes("?") ? "?" + u.split("?")[1] : ""; } },
     fetch: async (u: string) => fetch!(u),
-    document: { querySelector: () => null, getElementById: () => null, createElement: () => ({ click() {}, remove() {} }), body: { appendChild: (a: any) => (g.downloaded = a) } },
-    navigator: {}, setTimeout, clearTimeout, setInterval: () => 0, clearInterval() {},
+    document: { querySelector: (sel: string) => g.elements?.[sel.split('=')[0].replace('[', '')] ?? null, getElementById: () => null, createElement: () => ({ click() {}, remove() {} }), body: { appendChild: (a: any) => (g.downloaded = a) } },
+    navigator: {}, confirm: () => g.answer ?? true, setTimeout, clearTimeout, setInterval: () => 0, clearInterval() {},
     requestAnimationFrame: () => 0, cancelAnimationFrame() {}, addEventListener() {}, removeEventListener() {},
     URL: Object.assign(function (u: string, b?: string) { return new URL(u, b); }, { createObjectURL: () => "blob:x", revokeObjectURL() {} }),
   };
   g.window = g;
   const names = Object.keys(g);
-  const mod = new Function("DCLogic", ...names, js + "\nreturn { Component, parseBoard, serializeBoard, SEED_MD };")(DCLogic, ...names.map(k => g[k]));
+  const mod = new Function("DCLogic", ...names, js + "\nreturn { Component, parseBoard, serializeBoard, SEED_MD, THEMES, BASE_VARS, defaultSettings };")(DCLogic, ...names.map(k => g[k]));
   const make = () => { const c = new mod.Component({ startTheme: "minimal" }); c.componentDidMount(); return c; };
   return { ...mod, make, store, g };
 }
@@ -129,4 +129,66 @@ test("the template's tags are balanced", () => {
   const tpl = html.split("</helmet>")[1].split("</x-dc>")[0];
   for (const tag of ["div", "sc-if", "sc-for", "button", "label", "form", "section", "header", "span"])
     expect([tag, (tpl.match(new RegExp(`<${tag}[\\s>]`, "g")) ?? []).length]).toEqual([tag, (tpl.match(new RegExp(`</${tag}>`, "g")) ?? []).length]);
+});
+
+test("the menu holds New, Open, Save, Download and Style; New starts a blank board after confirming", async () => {
+  const store: Store = { [KEYS.board]: other };
+  const { make, g } = load("?view=split&task=t-01", store);
+  const c = make();
+  const menu = () => c.renderVals().menuItems.map((m: any) => m.label);
+  expect(c.renderVals().menuOpen).toBe(false);
+  c.renderVals().toggleMenu();
+  expect(menu()).toEqual(["New", "Open…", "Save", "Download", "Style"]);
+  const pick = (label: string) => c.renderVals().menuItems.find((m: any) => m.label === label).pick();
+  pick("Style"); expect([c.state.menuOpen, c.state.pickerOpen]).toEqual([false, true]);
+  pick("Open…"); expect([c.state.openOpen, c.state.pickerOpen]).toEqual([true, false]);
+  g.answer = false; pick("New");
+  expect(c.state.board.title).toBe("Elsewhere");
+  g.answer = true; pick("New");
+  expect(c.state.board.title).toBe("Untitled board");
+  expect(c.state.board.columns.map((col: any) => col.name)).toEqual(["To Do", "Doing", "Done"]);
+  expect(c.state.board.columns.flatMap((col: any) => col.tasks)).toEqual([]);
+  expect(store[KEYS.board]).toContain("# Untitled board");
+  expect(c.state.editingTaskId).toBe(null);
+  expect(g.location.search).toBe("?view=split");
+});
+
+test("inputs on panels (task drawer, style, open dialog) match the panel: light on light, dark on dark", () => {
+  const { THEMES, BASE_VARS, defaultSettings } = load();
+  const lum = (c: string) => { const m = c.match(/^#([0-9a-f]{6})$/i) ?? []; const rgba = c.match(/rgba?\(([^)]+)\)/);
+    const [r, g, b] = m[1] ? [0, 2, 4].map(i => parseInt(m[1].slice(i, i + 2), 16)) : rgba![1].split(",").map(Number);
+    return (r * 299 + g * 587 + b * 114) / 1000 > 128; };
+  for (const t of THEMES) {
+    const v = { ...BASE_VARS, ...t.vars(defaultSettings(t)) };
+    const control = v["--panel-control"] === "var(--control)" ? v["--control"] : v["--panel-control"];
+    expect([t.id, lum(control)]).toEqual([t.id, lum(v["--panel"])]);
+  }
+});
+
+test("adding a task opens it with the title focused and selected, so typing replaces it", () => {
+  const { make, g } = load();
+  const calls: string[] = [];
+  g.elements = { "data-kb-title": { focus: () => calls.push("focus"), select: () => calls.push("select") },
+    "data-kb-root": { offsetWidth: 1, getBoundingClientRect: () => ({ left: 0, top: 0, width: 1 }), querySelector: () => null } };
+  const c = make();
+  g.requestAnimationFrame = (f: () => void) => { f(); return 0; };   // after mount, so the effects loop isn't run
+  c.renderVals().columns[0].onAddTask();
+  expect(c.state.board.columns[0].tasks.at(-1).title).toBe("New task");
+  expect(c.state.editingTaskId).toBe(c.state.board.columns[0].tasks.at(-1).id);
+  expect(calls).toEqual(["focus", "select"]);
+});
+
+test("Enter in the task title closes the drawer, unless the title is invalid", () => {
+  const c = load("?task=t-01").make();
+  let prevented = 0;
+  const key = (k: string) => c.renderVals().editor.onTitleKey({ key: k, preventDefault: () => prevented++ });
+  c.renderVals().editor.onTitle({ target: { value: "" } });
+  key("Enter");
+  expect(c.state.editingTaskId).toBe("t-01");
+  c.renderVals().editor.onTitle({ target: { value: "Renamed" } });
+  key("a");
+  expect(c.state.editingTaskId).toBe("t-01");
+  key("Enter");
+  expect([c.state.editingTaskId, prevented]).toEqual([null, 2]);
+  expect(c.state.board.columns.flatMap((col: any) => col.tasks).find((t: any) => t.id === "t-01").title).toBe("Renamed");
 });

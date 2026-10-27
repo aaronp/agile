@@ -8,6 +8,8 @@ style. This repo is the app. Your board can live in its own repo and be loaded w
 [Publishing your own board](#publishing-your-own-board)).
 
 - **Board**, **Split** (board beside its markdown), **Archive** and **Markdown** views.
+- The **☰ menu** holds **New**, **Open**, **Save**, **Download** and **Style**.
+- **New** starts a blank board (To Do, Doing, Done) in the current style, after asking, since it replaces the board saved in this browser.
 - **Open**: drop a `.md` file, choose one, open one from a URL (GitHub file links work) or pick a recent one.
 - **Save** writes the board to a file you pick once, then to the same file each time (Ctrl/⌘ S). Browsers
   without a file picker (Firefox, Safari) download it instead. **Download** always downloads `<title>.md`.
