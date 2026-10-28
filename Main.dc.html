@@ -15,7 +15,8 @@
 body{margin:0}
 *{box-sizing:border-box}
 .kb{position:relative;height:100vh;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);color:var(--fg);font-family:var(--font);font-size:14px;line-height:1.4}
-.kb button,.kb input,.kb textarea,.kb select{font:inherit;color:inherit}
+/* Zero specificity, so any component class (e.g. .kb-primary) sets its own colour. */
+:where(.kb) :where(button,input,textarea,select){font:inherit;color:inherit}
 .kb :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .kb-fx{position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;display:block}
 .kb-fx-off{display:none}
@@ -173,6 +174,8 @@ body{margin:0}
 .kb-setting select{height:30px;border:1px solid var(--line);border-radius:6px;background:var(--control);padding:0 6px}
 .kb-setting input[type=checkbox]{width:18px;height:18px;accent-color:var(--accent)}
 .kb-setting output{font-family:var(--mono);font-size:11px;color:var(--panel-muted);min-width:42px;text-align:right}
+.kb-drawer-resize{position:absolute;top:0;bottom:0;left:0;width:6px;cursor:ew-resize;touch-action:none}
+.kb-drawer-resize:hover{background:var(--accent);opacity:.4}
 .kb-drawer{position:absolute;z-index:30;top:0;right:0;bottom:0;width:400px;max-width:100%;display:flex;flex-direction:column;gap:16px;padding:18px 20px;overflow:auto;background:var(--panel);color:var(--panel-fg);border-left:1px solid var(--line);box-shadow:-20px 0 50px rgba(0,0,0,.18)}
 .kb-drawer-head{display:flex;align-items:center;justify-content:space-between;gap:8px;font-family:var(--mono);font-size:12px;color:var(--panel-muted)}
 .kb-field{display:flex;flex-direction:column;gap:6px}
@@ -230,9 +233,6 @@ body{margin:0}
 .kb-menu-item{display:flex;align-items:baseline;justify-content:space-between;gap:16px;padding:8px 10px;border:0;border-radius:var(--radius);background:transparent;cursor:pointer;text-align:left}
 .kb-menu-item:hover,.kb-menu-item:focus-visible{background:var(--control)}
 a.kb-menu-item{color:inherit;text-decoration:none}
-.kb-menu-up{top:auto;bottom:calc(100% + 6px);right:auto;left:0}
-.kb-menu-item:disabled{opacity:.45;cursor:default;background:transparent}
-.kb-menu-danger{color:var(--danger-fg)}
 .kb-menu-sep{border:0;border-top:1px solid var(--line);margin:6px 4px;width:auto}
 .kb-menu-item small{color:var(--panel-muted);font-size:11px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .kb-src{font-family:var(--mono);font-size:11px;padding:3px 8px;border:1px dashed var(--line);border-radius:var(--radius);color:var(--muted);white-space:nowrap;cursor:help}
@@ -240,6 +240,7 @@ a.kb-menu-item{color:inherit;text-decoration:none}
 .kb-btn:disabled{opacity:.5;cursor:not-allowed}
 .kb-modal-back{position:absolute;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.45)}
 .kb-modal{width:min(520px,100%);max-height:calc(100% - 32px);overflow:auto;display:flex;flex-direction:column;gap:14px;padding:16px;border-radius:calc(var(--radius) + 4px);background:var(--panel);color:var(--panel-fg);border:1px solid var(--line);box-shadow:0 20px 50px rgba(0,0,0,.3)}
+.kb-modal-small{width:min(380px,100%)}
 .kb-modal-head{display:flex;align-items:center;gap:8px}
 .kb-modal-head h2{margin:0;flex:1;font-size:15px;font-weight:600}
 .kb-drop{position:relative;display:flex;flex-direction:column;align-items:center;gap:8px;padding:28px 16px;border:2px dashed var(--line);border-radius:var(--radius);cursor:pointer;text-align:center;color:var(--panel-muted)}
@@ -515,7 +516,8 @@ a.kb-menu-item{color:inherit;text-decoration:none}
   </sc-if>
 
   <sc-if value="{{editorOpen}}" hint-placeholder-val="{{ false }}">
-    <aside class="kb-drawer" aria-label="Task details">
+    <aside class="kb-drawer" style="{{drawerStyle}}" aria-label="Task details">
+      <div class="kb-drawer-resize" role="separator" aria-orientation="vertical" aria-label="Resize task panel" title="Drag to resize" onPointerDown="{{onDrawerResize}}"></div>
       <div class="kb-drawer-head">
         <span>{{editor.id}} · in {{editor.columnName}}</span>
         <button class="kb-icon" aria-label="Close task details" onClick="{{closeEditor}}">
@@ -597,18 +599,29 @@ a.kb-menu-item{color:inherit;text-decoration:none}
       <div class="kb-actions">
         <button class="kb-primary" onClick="{{closeEditor}}">Ok</button>
         <button class="kb-btn" disabled="{{editor.completeDisabled}}" title="{{editor.addChildTitle}}" onClick="{{editor.onAddChild}}">Create child task</button>
-        <div class="kb-menu-wrap" onKeyDown="{{editor.completeMenuKey}}">
-          <button class="kb-btn" aria-haspopup="menu" aria-expanded="{{editor.completeMenuOpen}}" onClick="{{editor.toggleCompleteMenu}}">Complete <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="m6 15 6-6 6 6"></path></svg></button>
-          <sc-if value="{{editor.completeMenuOpen}}" hint-placeholder-val="{{ false }}">
-            <div class="kb-menu-back" onClick="{{editor.closeCompleteMenu}}"></div>
-            <div class="kb-menu kb-menu-up" role="menu">
-              <button class="kb-menu-item" role="menuitem" disabled="{{editor.completeDisabled}}" onClick="{{editor.onComplete}}"><span>{{editor.completeLabel}}</span><small>To the archive</small></button>
-              <button class="kb-menu-item kb-menu-danger" role="menuitem" onClick="{{editor.onDelete}}"><span>Delete</span><small>Gone for good</small></button>
-            </div>
-          </sc-if>
-        </div>
+        <button class="kb-btn" onClick="{{editor.openCompleteDialog}}">Complete…</button>
       </div>
     </aside>
+  </sc-if>
+
+  <sc-if value="{{editor.completeDialogOpen}}" hint-placeholder-val="{{ false }}">
+    <div class="kb-modal-back" onClick="{{editor.completeDialogBackdrop}}" onKeyDown="{{editor.completeDialogKey}}">
+      <div class="kb-modal kb-modal-small" role="dialog" aria-modal="true" aria-labelledby="kb-complete-h">
+        <div class="kb-modal-head">
+          <h2 id="kb-complete-h">{{editor.completeDialogTitle}}</h2>
+          <button class="kb-icon" aria-label="Close" onClick="{{editor.closeCompleteDialog}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+        </div>
+        <p class="kb-muted kb-small">Mark complete moves it to the archive (see the Archive view). Delete removes it for good.</p>
+        <div class="kb-actions">
+          <button class="kb-primary" data-kb-complete="{{uid}}" disabled="{{editor.completeDisabled}}" title="{{editor.completeTitle}}" onClick="{{editor.onComplete}}">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5L20 7"></path></svg>
+            <span>{{editor.completeLabel}}</span>
+          </button>
+          <button class="kb-danger" onClick="{{editor.onDelete}}">Delete</button>
+          <button class="kb-btn" onClick="{{editor.closeCompleteDialog}}">Cancel</button>
+        </div>
+      </div>
+    </div>
   </sc-if>
 
   <canvas class="kb-burst" data-kb-burst="{{uid}}" aria-hidden="true"></canvas>
@@ -2666,6 +2679,8 @@ const VIEW_PARAM = { board: 'board', split: 'split', archive: 'archive', source:
 /** What New starts from (it keeps the current style). */
 const BLANK_MD = '# Untitled board\n\n## To Do\n\n## Doing\n\n## Done\n';
 const STORAGE_RECENTS = 'kb-recents:v1';
+const STORAGE_DRAWER_WIDTH = 'kb-drawer-width:v1';
+const DRAWER_MIN_WIDTH = 320;
 const MAX_RECENTS = 8;
 const MAX_UNDO = 100;
 
@@ -2710,7 +2725,8 @@ class Component extends DCLogic {
       copyLabel: 'Copy',
       themeOverride: p.theme,
       menuOpen: false,
-      completeMenuFor: null,
+      completeDialogFor: null,
+      drawerWidth: Component.loadDrawerWidth(),
       collapsed: [], // ids of tasks whose children are folded away (this session only)
       past: [], future: [], // undo/redo: earlier and undone boards, nearest last / first
       recents: Component.loadRecents(),
@@ -2749,6 +2765,23 @@ class Component extends DCLogic {
     if (s.themeOverride !== null) q.set('theme', s.themeOverride);
     const out = q.toString().replace(/%2F/gi, '/').replace(/%3A/gi, ':').replace(/%2C/gi, ',');
     return out === '' ? '' : `?${out}`;
+  }
+  static loadDrawerWidth() {
+    try { const w = Number(window.localStorage.getItem(STORAGE_DRAWER_WIDTH)); return w >= DRAWER_MIN_WIDTH ? w : 400; } catch (err) { return 400; } // blocked storage: default width
+  }
+  /** Drag the drawer's left edge; the width is remembered in this browser. */
+  resizeDrawer(e) {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startW = this.state.drawerWidth;
+    const move = (ev) => this.setState({ drawerWidth: Math.max(DRAWER_MIN_WIDTH, Math.min(window.innerWidth - 40, startW + startX - ev.clientX)) });
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      try { window.localStorage.setItem(STORAGE_DRAWER_WIDTH, String(Math.round(this.state.drawerWidth))); } catch (err) { /* blocked storage: width lasts this session */ }
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
   }
   static loadRecents() {
     try {
@@ -3455,13 +3488,19 @@ class Component extends DCLogic {
           const kind = this.pickEffect('delete');
           // Burst where the card was; the button stands in when the card isn't on screen (filtered out, markdown view).
           const rect = this.cardRect(t.id) ?? this.elRect(e.currentTarget);
-          if (this.commit((b) => deleteTask(b, t.id), { editingTaskId: null })) this.playEffect(kind, rect);
+          if (this.commit((b) => deleteTask(b, t.id), { editingTaskId: null, completeDialogFor: null })) this.playEffect(kind, rect);
         },
-        // Keyed to the task so the menu never reappears open on the next task.
-        completeMenuOpen: s.completeMenuFor === t.id,
-        toggleCompleteMenu: () => this.setState({ completeMenuFor: s.completeMenuFor === t.id ? null : t.id }),
-        closeCompleteMenu: () => this.setState({ completeMenuFor: null }),
-        completeMenuKey: (e) => { if (e.key === 'Escape') this.setState({ completeMenuFor: null }); },
+        // Keyed to the task so the dialog never reappears for another task.
+        completeDialogOpen: s.completeDialogFor === t.id,
+        completeDialogTitle: `Finish "${t.title}"`,
+        openCompleteDialog: () => this.setState({ completeDialogFor: t.id }, () => window.requestAnimationFrame(() => {
+          // Focus inside the dialog so Escape reaches it; the first enabled choice.
+          const done = document.querySelector(`[data-kb-complete="${this.uid}"]`);
+          if (done !== null) (done.disabled ? done.nextElementSibling : done).focus();
+        })),
+        closeCompleteDialog: () => this.setState({ completeDialogFor: null }),
+        completeDialogBackdrop: (e) => { if (e.target === e.currentTarget) this.setState({ completeDialogFor: null }); },
+        completeDialogKey: (e) => { if (e.key === 'Escape') { e.stopPropagation(); this.setState({ completeDialogFor: null }); } },
         completeDisabled: c === null,
         addChildTitle: c === null ? 'Restore it first' : 'A new task under this one, in the same column',
         onAddChild: () => { if (c !== null) this.createTask(c.id, t.id); },
@@ -3475,7 +3514,7 @@ class Component extends DCLogic {
           // The card leaves the board, so celebrate where it was (or at the button when it isn't on screen).
           const rect = this.cardRect(t.id) ?? this.elRect(e.currentTarget);
           const at = this.nowIso();
-          if (this.commit((b) => archiveTask(b, t.id, at), { editingTaskId: null })) this.playEffect(kind, rect);
+          if (this.commit((b) => archiveTask(b, t.id, at), { editingTaskId: null, completeDialogFor: null })) this.playEffect(kind, rect);
         },
       };
     }
@@ -3629,6 +3668,8 @@ class Component extends DCLogic {
 
       editorOpen: editor !== null,
       editor: editor ?? {},
+      drawerStyle: `width: ${s.drawerWidth}px`,
+      onDrawerResize: (e) => this.resizeDrawer(e),
       closeEditor: () => this.setState({ editingTaskId: null, drafts: {}, fieldErrors: {}, tagInput: '' }),
       ownerNames: allOwners.filter((o) => o !== ''),
       tagNames: allTags,
