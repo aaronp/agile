@@ -106,6 +106,29 @@ body{margin:0}
 .kb-card-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
 .kb-owner{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--card-muted);margin-left:auto}
 .kb-avatar{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;font-size:10px;font-weight:600;color:var(--tag-fg)}
+.kb-card-tools{position:absolute;top:6px;right:6px;display:flex;gap:4px}
+.kb-card-haskids .kb-card-title{padding-right:48px}
+.kb-card-fold{display:inline-flex;align-items:center;gap:2px;height:22px;padding:0 4px;border:1px solid var(--card-border);border-radius:var(--radius);background:var(--card);color:var(--card-muted);font-size:11px;cursor:pointer}
+.kb-card-fold:hover{color:var(--card-fg)}
+.kb-card-fold[aria-expanded="false"] svg{transform:rotate(-90deg)}
+.kb-card-away{position:relative;display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding:6px var(--pad);border:1.5px dotted var(--card-muted);border-radius:var(--radius);background:color-mix(in srgb,var(--card) 55%,transparent);color:var(--card-fg)}
+.kb-card-away small{flex:none;color:var(--card-muted);font-size:11px}
+.kb-card-away-link{all:unset;cursor:pointer;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
+.kb-card-away-link:hover{text-decoration:underline}
+.kb-card-away-link:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:2px}
+.kb-card.kb-card-flash{animation:kbFlash 1.2s ease-out}
+@keyframes kbFlash{0%,50%{box-shadow:0 0 0 3px var(--accent),var(--card-shadow)}100%{box-shadow:var(--card-shadow)}}
+.kb-card-child{display:grid;place-items:center;width:22px;height:22px;padding:0;border:1px solid var(--card-border);border-radius:var(--radius);background:var(--card);color:var(--card-muted);cursor:pointer;opacity:0;transition:opacity .12s}
+.kb-card:hover .kb-card-child,.kb-card-child:focus-visible{opacity:1}
+.kb-card-child:hover{color:var(--card-fg)}
+.kb-card-parent{all:unset;cursor:pointer;color:var(--card-muted);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kb-card-parent:hover{color:var(--card-fg);text-decoration:underline}
+.kb-card-parent:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:2px}
+.kb-card.kb-card-ancestor{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent),var(--card-shadow)}
+/* Tree lines: each starts in the gap above its card, so stacked rows join into one line. */
+.kb-rail{position:absolute;top:calc(-1 * var(--gap) - 1px);bottom:-1px;border-left:2px solid var(--line);pointer-events:none}
+.kb-rail-end{bottom:auto;height:calc(var(--gap) + 18px)}
+.kb-rail-tee::after,.kb-rail-end::after{content:"";position:absolute;top:calc(var(--gap) + 16px);left:0;width:7px;border-top:2px solid var(--line)}
 .kb-card-ph{border:1.5px dashed var(--accent);border-radius:var(--radius);opacity:.6;background:var(--placeholder)}
 .kb-col-ph{flex:none;width:var(--col-w);border:1.5px dashed var(--accent);border-radius:var(--radius);background:var(--placeholder);opacity:.6}
 .kb-add{display:flex;align-items:center;gap:6px;height:34px;padding:0 8px;border:1px dashed var(--line);border-radius:var(--radius);background:transparent;color:var(--col-head-fg);cursor:pointer;opacity:.8}
@@ -119,6 +142,7 @@ body{margin:0}
 .kb-card.kb-anim-nova{animation:kbNova .9s ease-out}
 @media (prefers-reduced-motion: reduce){.kb-card.kb-anim-pop,.kb-card.kb-anim-nova{animation:none}}
 .kb-actions{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.kb-actions .kb-btn{height:34px}
 .kb-primary{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 12px;border:1px solid var(--accent);border-radius:var(--radius);background:var(--accent);color:var(--accent-fg);cursor:pointer}
 .kb-primary:disabled{opacity:.45;cursor:default}
 .kb-effect{display:grid;grid-template-columns:110px minmax(0,1fr) auto;align-items:center;gap:10px;font-size:13px}
@@ -205,6 +229,11 @@ body{margin:0}
 .kb-menu{position:absolute;z-index:30;top:calc(100% + 6px);right:0;min-width:220px;display:flex;flex-direction:column;padding:6px;border-radius:calc(var(--radius) + 4px);background:var(--panel);color:var(--panel-fg);border:1px solid var(--line);box-shadow:0 20px 50px rgba(0,0,0,.22)}
 .kb-menu-item{display:flex;align-items:baseline;justify-content:space-between;gap:16px;padding:8px 10px;border:0;border-radius:var(--radius);background:transparent;cursor:pointer;text-align:left}
 .kb-menu-item:hover,.kb-menu-item:focus-visible{background:var(--control)}
+a.kb-menu-item{color:inherit;text-decoration:none}
+.kb-menu-up{top:auto;bottom:calc(100% + 6px);right:auto;left:0}
+.kb-menu-item:disabled{opacity:.45;cursor:default;background:transparent}
+.kb-menu-danger{color:var(--danger-fg)}
+.kb-menu-sep{border:0;border-top:1px solid var(--line);margin:6px 4px;width:auto}
 .kb-menu-item small{color:var(--panel-muted);font-size:11px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .kb-src{font-family:var(--mono);font-size:11px;padding:3px 8px;border:1px dashed var(--line);border-radius:var(--radius);color:var(--muted);white-space:nowrap;cursor:help}
 .kb-btn-primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
@@ -265,6 +294,8 @@ body{margin:0}
             <sc-for list="{{menuItems}}" as="mi" hint-placeholder-count="5">
               <button class="kb-menu-item" role="menuitem" onClick="{{mi.pick}}"><span>{{mi.label}}</span><small>{{mi.hint}}</small></button>
             </sc-for>
+            <hr class="kb-menu-sep">
+            <a class="kb-menu-item" role="menuitem" href="https://github.com/aaronp/agile" target="_blank" rel="noopener noreferrer" onClick="{{closeMenu}}"><span>Repo</span><small>GitHub</small></a>
           </div>
         </sc-if>
       </div>
@@ -315,7 +346,7 @@ body{margin:0}
                 <button class="kb-icon kb-grip" aria-label="{{col.gripLabel}}" onPointerDown="{{col.onGrip}}">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.6"></circle><circle cx="15" cy="6" r="1.6"></circle><circle cx="9" cy="12" r="1.6"></circle><circle cx="15" cy="12" r="1.6"></circle><circle cx="9" cy="18" r="1.6"></circle><circle cx="15" cy="18" r="1.6"></circle></svg>
                 </button>
-                <input class="kb-col-name" aria-label="Column name" value="{{col.nameValue}}" onChange="{{col.onName}}" onBlur="{{col.onNameBlur}}">
+                <input class="kb-col-name" data-kb-col="{{col.nameRef}}" aria-label="Column name" value="{{col.nameValue}}" onChange="{{col.onName}}" onBlur="{{col.onNameBlur}}">
                 <span class="kb-col-count">{{col.countLabel}}</span>
                 <button class="kb-icon" aria-label="{{col.deleteLabel}}" title="{{col.deleteTitle}}" disabled="{{col.deleteDisabled}}" onClick="{{col.onDelete}}">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
@@ -327,8 +358,21 @@ body{margin:0}
                   <sc-if value="{{it.isPlaceholder}}" hint-placeholder-val="{{ false }}">
                     <div class="kb-card-ph" style="{{it.phStyle}}"></div>
                   </sc-if>
+                  <sc-if value="{{it.isAway}}" hint-placeholder-val="{{ false }}">
+                    <div class="kb-card-away" style="{{it.indentStyle}}">
+                      <sc-for list="{{it.rails}}" as="rl" hint-placeholder-count="0"><span class="{{rl.cls}}" style="{{rl.style}}" aria-hidden="true"></span></sc-for>
+                      <button class="kb-card-away-link" title="{{it.focusLabel}}" onClick="{{it.focus}}">{{it.title}}</button>
+                      <small>{{it.awayIn}}</small>
+                    </div>
+                  </sc-if>
                   <sc-if value="{{it.isTask}}" hint-placeholder-val="{{ true }}">
-                    <article class="{{it.cardClass}}" data-obstacle="{{it.obstacleId}}" data-card-slot="{{it.id}}" onPointerDown="{{it.onPointerDown}}">
+                    <article class="{{it.cardClass}}" style="{{it.indentStyle}}" data-obstacle="{{it.obstacleId}}" data-card-slot="{{it.id}}" onPointerDown="{{it.onPointerDown}}">
+                      <sc-for list="{{it.rails}}" as="rl" hint-placeholder-count="0"><span class="{{rl.cls}}" style="{{rl.style}}" aria-hidden="true"></span></sc-for>
+                      <div class="kb-card-tools">
+                        <button class="kb-card-child" aria-label="{{it.addChildLabel}}" title="Add child task" onClick="{{it.onAddChild}}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></button>
+                        <sc-if value="{{it.hasKids}}" hint-placeholder-val="{{ false }}"><button class="kb-card-fold" aria-expanded="{{it.expanded}}" aria-label="{{it.foldLabel}}" title="{{it.foldLabel}}" onClick="{{it.toggleFold}}">{{it.foldText}}<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></button></sc-if>
+                      </div>
+                      <sc-if value="{{it.hasParentHint}}" hint-placeholder-val="{{ false }}"><button class="kb-card-parent" title="Open parent task" onClick="{{it.openParent}}">{{it.parentHint}}</button></sc-if>
                       <button class="kb-card-title" onClick="{{it.open}}">{{it.title}}</button>
                       <sc-if value="{{it.hasDescription}}" hint-placeholder-val="{{ false }}"><div class="{{it.descClass}}"><sc-for list="{{it.desc}}" as="blk" hint-placeholder-count="1"><sc-if value="{{blk.isPara}}" hint-placeholder-val="{{ true }}"><p class="md-p"><sc-for list="{{blk.spans}}" as="sp"><sc-if value="{{sp.isLink}}" hint-placeholder-val="{{ false }}"><a class="{{sp.cls}}" href="{{sp.href}}" target="_blank" rel="noopener noreferrer">{{sp.text}}</a></sc-if><sc-if value="{{sp.isPlain}}" hint-placeholder-val="{{ true }}"><span class="{{sp.cls}}">{{sp.text}}</span></sc-if></sc-for></p></sc-if><sc-if value="{{blk.isHeading}}" hint-placeholder-val="{{ false }}"><p class="md-h"><sc-for list="{{blk.spans}}" as="sp"><sc-if value="{{sp.isLink}}" hint-placeholder-val="{{ false }}"><a class="{{sp.cls}}" href="{{sp.href}}" target="_blank" rel="noopener noreferrer">{{sp.text}}</a></sc-if><sc-if value="{{sp.isPlain}}" hint-placeholder-val="{{ true }}"><span class="{{sp.cls}}">{{sp.text}}</span></sc-if></sc-for></p></sc-if><sc-if value="{{blk.isQuote}}" hint-placeholder-val="{{ false }}"><blockquote class="md-q"><sc-for list="{{blk.spans}}" as="sp"><sc-if value="{{sp.isLink}}" hint-placeholder-val="{{ false }}"><a class="{{sp.cls}}" href="{{sp.href}}" target="_blank" rel="noopener noreferrer">{{sp.text}}</a></sc-if><sc-if value="{{sp.isPlain}}" hint-placeholder-val="{{ true }}"><span class="{{sp.cls}}">{{sp.text}}</span></sc-if></sc-for></blockquote></sc-if><sc-if value="{{blk.isCode}}" hint-placeholder-val="{{ false }}"><pre class="md-pre"><code>{{blk.text}}</code></pre></sc-if><sc-if value="{{blk.isRule}}" hint-placeholder-val="{{ false }}"><hr class="md-hr"></sc-if><sc-if value="{{blk.isList}}" hint-placeholder-val="{{ false }}"><ul class="md-list"><sc-for list="{{blk.items}}" as="li"><li class="md-li" style="{{li.style}}"><sc-if value="{{li.isCheck}}" hint-placeholder-val="{{ false }}"><input type="checkbox" aria-label="{{li.checkLabel}}" checked="{{li.checked}}" onChange="{{li.toggle}}"></sc-if><sc-if value="{{li.isMarker}}" hint-placeholder-val="{{ true }}"><span class="md-marker" aria-hidden="true">{{li.marker}}</span></sc-if><span class="{{li.bodyCls}}"><sc-for list="{{li.spans}}" as="sp"><sc-if value="{{sp.isLink}}" hint-placeholder-val="{{ false }}"><a class="{{sp.cls}}" href="{{sp.href}}" target="_blank" rel="noopener noreferrer">{{sp.text}}</a></sc-if><sc-if value="{{sp.isPlain}}" hint-placeholder-val="{{ true }}"><span class="{{sp.cls}}">{{sp.text}}</span></sc-if></sc-for></span></li></sc-for></ul></sc-if></sc-for></div></sc-if>
                       <sc-if value="{{it.hasFoot}}" hint-placeholder-val="{{ true }}">
@@ -483,25 +527,19 @@ body{margin:0}
         <input data-kb-title="{{uid}}" value="{{editor.title}}" onChange="{{editor.onTitle}}" onBlur="{{editor.onBlurTitle}}" onKeyDown="{{editor.onTitleKey}}">
       </label>
       <sc-if value="{{editor.titleError}}" hint-placeholder-val="{{ false }}"><p class="kb-field-error">{{editor.titleError}}</p></sc-if>
-      <label class="kb-field">
-        <span>Owner</span>
-        <input value="{{editor.owner}}" placeholder="Unassigned" list="{{ownerListId}}" onChange="{{editor.onOwner}}" onKeyDown="{{editor.onOwnerKey}}" onBlur="{{editor.onBlurOwner}}">
-      </label>
-      <datalist id="{{ownerListId}}"><sc-for list="{{ownerNames}}" as="on"><option value="{{on}}"></option></sc-for></datalist>
-      <sc-if value="{{editor.ownerError}}" hint-placeholder-val="{{ false }}"><p class="kb-field-error">{{editor.ownerError}}</p></sc-if>
       <div class="kb-field">
         <div class="kb-desc-head">
           <span>Description</span>
           <div class="kb-tabs" role="group" aria-label="Description view">
-            <button class="kb-tab" aria-pressed="{{editor.isWrite}}" onClick="{{editor.showWrite}}">Write</button>
-            <button class="kb-tab" aria-pressed="{{editor.isPreview}}" onClick="{{editor.showPreview}}">Preview</button>
+            <button class="kb-tab" tabindex="-1" aria-pressed="{{editor.isWrite}}" onClick="{{editor.showWrite}}">Write</button>
+            <button class="kb-tab" tabindex="-1" aria-pressed="{{editor.isPreview}}" onClick="{{editor.showPreview}}">Preview</button>
           </div>
         </div>
         <sc-if value="{{editor.isWrite}}" hint-placeholder-val="{{ true }}">
           <div class="kb-md-editor">
             <div class="kb-fmtbar" role="toolbar" aria-label="Formatting">
               <sc-for list="{{editor.formatButtons}}" as="fb" hint-placeholder-count="10">
-                <button class="{{fb.cls}}" aria-label="{{fb.label}}" title="{{fb.title}}" onMouseDown="{{fb.keepFocus}}" onClick="{{fb.apply}}">
+                <button class="{{fb.cls}}" tabindex="-1" aria-label="{{fb.label}}" title="{{fb.title}}" onMouseDown="{{fb.keepFocus}}" onClick="{{fb.apply}}">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{fb.d}}"></path></svg>
                 </button>
               </sc-for>
@@ -522,12 +560,18 @@ body{margin:0}
         <span>Tags</span>
         <div class="kb-pills kb-tag-edit">
           <sc-for list="{{editor.tags}}" as="tg">
-            <span class="kb-pill" style="{{tg.style}}">{{tg.label}}<button class="kb-pill-x" aria-label="{{tg.removeLabel}}" onClick="{{tg.remove}}"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button></span>
+            <span class="kb-pill" style="{{tg.style}}">{{tg.label}}<button class="kb-pill-x" tabindex="-1" aria-label="{{tg.removeLabel}}" onClick="{{tg.remove}}"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button></span>
           </sc-for>
           <input class="kb-tag-input" placeholder="Add tag, press Enter" aria-label="Add tag" list="{{tagListId}}" value="{{tagInput}}" onChange="{{onTagInput}}" onKeyDown="{{onTagKey}}">
           <datalist id="{{tagListId}}"><sc-for list="{{tagNames}}" as="tn"><option value="{{tn}}"></option></sc-for></datalist>
         </div>
       </div>
+      <label class="kb-field">
+        <span>Owner</span>
+        <input value="{{editor.owner}}" placeholder="Unassigned" list="{{ownerListId}}" onChange="{{editor.onOwner}}" onKeyDown="{{editor.onOwnerKey}}" onBlur="{{editor.onBlurOwner}}">
+      </label>
+      <datalist id="{{ownerListId}}"><sc-for list="{{ownerNames}}" as="on"><option value="{{on}}"></option></sc-for></datalist>
+      <sc-if value="{{editor.ownerError}}" hint-placeholder-val="{{ false }}"><p class="kb-field-error">{{editor.ownerError}}</p></sc-if>
       <div class="kb-field">
         <button class="kb-hist-toggle" aria-expanded="{{editor.historyOpen}}" onClick="{{editor.toggleHistory}}">
           <svg class="kb-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"></path></svg>
@@ -551,11 +595,18 @@ body{margin:0}
         </sc-if>
       </div>
       <div class="kb-actions">
-        <button class="kb-primary" disabled="{{editor.completeDisabled}}" title="{{editor.completeTitle}}" onClick="{{editor.onComplete}}">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5L20 7"></path></svg>
-          <span>{{editor.completeLabel}}</span>
-        </button>
-        <button class="kb-danger" onClick="{{editor.onDelete}}">Delete task</button>
+        <button class="kb-primary" onClick="{{closeEditor}}">Ok</button>
+        <button class="kb-btn" disabled="{{editor.completeDisabled}}" title="{{editor.addChildTitle}}" onClick="{{editor.onAddChild}}">Create child task</button>
+        <div class="kb-menu-wrap" onKeyDown="{{editor.completeMenuKey}}">
+          <button class="kb-btn" aria-haspopup="menu" aria-expanded="{{editor.completeMenuOpen}}" onClick="{{editor.toggleCompleteMenu}}">Complete <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="m6 15 6-6 6 6"></path></svg></button>
+          <sc-if value="{{editor.completeMenuOpen}}" hint-placeholder-val="{{ false }}">
+            <div class="kb-menu-back" onClick="{{editor.closeCompleteMenu}}"></div>
+            <div class="kb-menu kb-menu-up" role="menu">
+              <button class="kb-menu-item" role="menuitem" disabled="{{editor.completeDisabled}}" onClick="{{editor.onComplete}}"><span>{{editor.completeLabel}}</span><small>To the archive</small></button>
+              <button class="kb-menu-item kb-menu-danger" role="menuitem" onClick="{{editor.onDelete}}"><span>Delete</span><small>Gone for good</small></button>
+            </div>
+          </sc-if>
+        </div>
       </div>
     </aside>
   </sc-if>
@@ -701,6 +752,10 @@ const Task = T.Object({
   owner: OwnerName,
   tags: T.Array(Tag, { unique: true, doc: 'Categories for filtering; order is kept as entered.' }),
   history: T.Array(HistoryEntry, { minItems: 1, doc: 'Append-only arrival log, oldest first.' }),
+  parent: T.String({
+    doc: 'Id of the task this one was split out of ("" = top level). Set when the child is created. In the same column a child shows indented under its parent; elsewhere it shows "↳ parent title". Written as "- parent: t-03", left out when empty.',
+    example: 't-03', pattern: /^[A-Za-z0-9_-]*$/, patternHint: 'must be a task id',
+  }),
 }, { doc: 'A card on the board.' });
 
 const Column = T.Object({
@@ -790,16 +845,40 @@ function validateBoard(board) {
     if (seenCols.has(col.id)) fail(`board: duplicate column id "${col.id}"`);
     seenCols.add(col.id);
   }
-  for (const t of [...board.columns.flatMap((c) => c.tasks), ...board.archive]) {
+  const every = [...board.columns.flatMap((c) => c.tasks), ...board.archive];
+  for (const t of every) {
     if (seenTasks.has(t.id)) fail(`board: task id "${t.id}" is used twice`);
     seenTasks.add(t.id);
+  }
+  const parentOf = new Map(every.map((t) => [t.id, t.parent]));
+  for (const t of every) {
+    if (t.parent === '') continue;
+    if (!seenTasks.has(t.parent)) fail(`board: task "${t.id}" has parent "${t.parent}", which doesn't exist`);
+    // Walk up; seeing t again means a loop.
+    for (let p = t.parent, steps = 0; p !== ''; p = parentOf.get(p), steps++) {
+      if (p === t.id || steps > every.length) fail(`board: task "${t.id}" is its own ancestor`);
+    }
   }
   return board;
 }
 
+/** Pixels a child card sits right of its parent (the tree lines are drawn in that gap). */
+const INDENT = 18;
+
+/** Parents first, each followed by its children (only those in the same list), keeping the list's order otherwise. */
+function treeOrder(tasks) {
+  const here = new Set(tasks.map((t) => t.id));
+  const kids = new Map();
+  for (const t of tasks) if (here.has(t.parent)) kids.set(t.parent, [...(kids.get(t.parent) ?? []), t]);
+  const out = [];
+  const walk = (t, depth) => { out.push({ task: t, depth }); for (const k of kids.get(t.id) ?? []) walk(k, depth + 1); };
+  for (const t of tasks) if (!here.has(t.parent)) walk(t, 0);
+  return out;
+}
+
 /* ---------- (2) Markdown <-> Board ---------- */
 
-const META_KEYS = ['id', 'owner', 'tags', 'history'];
+const META_KEYS = ['id', 'parent', 'owner', 'tags', 'history'];
 
 /** Front matter lines -> full settings. `lines` are the lines between the "---" markers; `first` is the 0-based line of the first. */
 function parseSettings(lines, first) {
@@ -888,6 +967,7 @@ function parseBoard(src) {
       owner: task.meta.owner,
       tags: task.meta.tags === '' ? [] : task.meta.tags.split(',').map((s) => s.trim()),
       history: task.history,
+      parent: task.meta.parent ?? '',
     };
     check(Task, built, where);
     if (idLines.has(built.id)) fail(`${where}: id "${built.id}" is already used on line ${idLines.get(built.id) + 1}`);
@@ -995,7 +1075,7 @@ function parseBoard(src) {
 }
 
 function serializeTask(t) {
-  const out = [`### ${t.title}`, `- id: ${t.id}`, t.owner === '' ? '- owner:' : `- owner: ${t.owner}`, t.tags.length === 0 ? '- tags:' : `- tags: ${t.tags.join(', ')}`, '- history:'];
+  const out = [`### ${t.title}`, `- id: ${t.id}`, ...(t.parent === '' ? [] : [`- parent: ${t.parent}`]), t.owner === '' ? '- owner:' : `- owner: ${t.owner}`, t.tags.length === 0 ? '- tags:' : `- tags: ${t.tags.join(', ')}`, '- history:'];
   for (const h of t.history) out.push(`  - ${h.column} @ ${h.at}${h.owner === '' ? '' : ` by ${h.owner}`}`);
   const desc = t.description.replace(/^\n+/, '').replace(/\s+$/, '');
   if (desc !== '') {
@@ -1051,7 +1131,8 @@ function nextTaskId(board) {
 function nextColumnId(board) {
   return nextNumbered(board.columns.map((c) => c.id), /^c(\d+)$/, (n) => `c${n}`);
 }
-const withColumns = (board, columns) => validateBoard({ ...board, columns });
+/** Every column change goes through here, so each column always lists parents before their children. */
+const withColumns = (board, columns) => validateBoard({ ...board, columns: columns.map((c) => ({ ...c, tasks: treeOrder(c.tasks).map((x) => x.task) })) });
 /** Replace one task wherever it lives (column or archive). */
 function mapTask(board, taskId, f) {
   findTask(board, taskId);
@@ -1063,10 +1144,10 @@ const placeOf = (found) => ({ column: found.col === null ? 'Archive' : found.col
 
 function setBoardTitle(board, title) { return validateBoard({ ...board, title }); }
 
-function addTask(board, colId, title, at) {
+function addTask(board, colId, title, at, parent = '') {
   const col = findColumn(board, colId);
   const id = nextTaskId(board);
-  const task = { id, title, description: '', owner: '', tags: [], history: [{ column: col.name, at, owner: '' }] };
+  const task = { id, title, description: '', owner: '', tags: [], history: [{ column: col.name, at, owner: '' }], parent };
   return { board: withColumns(board, board.columns.map((c) => (c.id === colId ? { ...c, tasks: [...c.tasks, task] } : c))), id };
 }
 
@@ -1084,9 +1165,11 @@ function reassignTask(board, taskId, owner, at) {
   return mapTask(board, taskId, (t) => ({ ...t, owner, history: [...t.history, { ...placeOf(found), at, owner }] }));
 }
 
+/** Its children move up to its own parent. */
 function deleteTask(board, taskId) {
-  findTask(board, taskId);
-  return validateBoard({ ...board, columns: board.columns.map((c) => ({ ...c, tasks: c.tasks.filter((t) => t.id !== taskId) })), archive: board.archive.filter((t) => t.id !== taskId) });
+  const { task } = findTask(board, taskId);
+  const keep = (tasks) => tasks.filter((t) => t.id !== taskId).map((t) => (t.parent === taskId ? { ...t, parent: task.parent } : t));
+  return withColumns({ ...board, archive: keep(board.archive) }, board.columns.map((c) => ({ ...c, tasks: keep(c.tasks) })));
 }
 
 /** Move a task before `beforeId` in `toColId` (null = append). Crossing columns appends a history entry at `at`. */
@@ -1110,7 +1193,7 @@ function archiveTask(board, taskId, at) {
   const { col, task } = findTask(board, taskId);
   if (col === null) fail(`"${task.title}" is already archived`);
   const archived = { ...task, history: [...task.history, { column: 'Archive', at, owner: task.owner }] };
-  return validateBoard({ ...board, columns: board.columns.map((c) => (c.id === col.id ? { ...c, tasks: c.tasks.filter((t) => t.id !== taskId) } : c)), archive: [...board.archive, archived] });
+  return withColumns({ ...board, archive: [...board.archive, archived] }, board.columns.map((c) => (c.id === col.id ? { ...c, tasks: c.tasks.filter((t) => t.id !== taskId) } : c)));
 }
 
 /** Bring an archived task back to the end of `colId`. */
@@ -1119,7 +1202,7 @@ function restoreTask(board, taskId, colId, at) {
   if (from !== null) fail(`"${task.title}" isn't archived`);
   const to = findColumn(board, colId);
   const restored = { ...task, history: [...task.history, { column: to.name, at, owner: task.owner }] };
-  return validateBoard({ ...board, columns: board.columns.map((c) => (c.id === to.id ? { ...c, tasks: [...c.tasks, restored] } : c)), archive: board.archive.filter((t) => t.id !== taskId) });
+  return withColumns({ ...board, archive: board.archive.filter((t) => t.id !== taskId) }, board.columns.map((c) => (c.id === to.id ? { ...c, tasks: [...c.tasks, restored] } : c)));
 }
 
 /* Settings operations: the markdown header is the single home for these. */
@@ -2627,6 +2710,8 @@ class Component extends DCLogic {
       copyLabel: 'Copy',
       themeOverride: p.theme,
       menuOpen: false,
+      completeMenuFor: null,
+      collapsed: [], // ids of tasks whose children are folded away (this session only)
       past: [], future: [], // undo/redo: earlier and undone boards, nearest last / first
       recents: Component.loadRecents(),
       openOpen: false, openUrl: p.src ?? '', openBusy: false, openError: null, openDragging: false,
@@ -3137,6 +3222,37 @@ class Component extends DCLogic {
     else bug(`drag kind "${d.kind}"`);
   }
 
+  /** Scroll a board card into view, focus it and flash it (the dotted stand-ins link here). */
+  focusCard(id) {
+    const el = this.rootEl()?.querySelector(`[data-card-slot="${id}"]`) ?? null;
+    if (el === null) return;
+    el.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+    el.querySelector('.kb-card-title')?.focus({ preventScroll: true });
+    this.setState({ fresh: { id, cls: 'kb-card-flash' } });
+    window.setTimeout(() => { if (this.state.fresh !== null && this.state.fresh.id === id) this.setState({ fresh: null }); }, 1200);
+  }
+
+  /** New task (a child when `parent` is set) in `colId`, then open it with its title selected. */
+  createTask(colId, parent) {
+    const at = this.nowIso();
+    const kind = this.pickEffect('create');
+    let created = null;
+    const ok = this.commit((b) => { created = addTask(b, colId, parent === '' ? 'New task' : 'New child task', at, parent); return created.board; });
+    if (!ok) return;
+    const id = created.id;
+    this.setState({ editingTaskId: id, drafts: {}, fieldErrors: {}, tagInput: '', pickerOpen: false, historyOpen: false, fresh: kind === null ? null : { id, cls: ENTRY_CLASS[kind] } }, () => {
+      // Focus the title with its placeholder text selected, so typing replaces it (next frame: the panel has rendered by then).
+      window.requestAnimationFrame(() => {
+        const input = document.querySelector(`[data-kb-title="${this.uid}"]`);
+        if (input !== null) { input.focus(); input.select(); }
+      });
+      // A filter can hide the new card; then there is nothing on screen to animate and only the panel opens.
+      const rect = this.cardRect(id);
+      if (rect !== null) this.playEffect(kind, rect);
+      window.setTimeout(() => { if (this.state.fresh !== null && this.state.fresh.id === id) this.setState({ fresh: null }); }, 1000);
+    });
+  }
+
   /* ---- render ---- */
   renderVals() {
     const s = this.state;
@@ -3165,21 +3281,71 @@ class Component extends DCLogic {
     });
 
     const filterActive = s.query.trim() !== '' || s.tagFilter.length > 0 || s.ownerFilter.length > 0;
-    const placeholder = (w, h) => ({ isPlaceholder: true, isTask: false, isColumn: false, phStyle: `height: ${Math.round(h)}px; min-height: ${Math.round(h)}px` + (w === null ? '' : `; width: ${Math.round(w)}px`) });
+    const placeholder = (w, h) => ({ isPlaceholder: true, isTask: false, isAway: false, isColumn: false, phStyle: `height: ${Math.round(h)}px; min-height: ${Math.round(h)}px` + (w === null ? '' : `; width: ${Math.round(w)}px`) });
 
+    // Every task above the open one, so its whole chain of parents lights up.
+    const ancestors = new Set();
+    for (let p = everyTask.find((t) => t.id === s.editingTaskId)?.parent ?? ''; p !== ''; p = everyTask.find((t) => t.id === p).parent) ancestors.add(p);
     const columnViews = board.columns.flatMap((col) => {
       if (drag !== null && drag.kind === 'column' && drag.id === col.id) return [];
       const visible = col.tasks.filter((t) => taskMatches(t, filter));
       const shown = visible.filter((t) => !(drag !== null && drag.kind === 'task' && drag.id === t.id));
-      const items = shown.map((t) => ({
-        ...cardView(t, true), isPlaceholder: false, isTask: true, obstacleId: `card:${t.id}`,
-        cardClass: s.fresh !== null && s.fresh.id === t.id ? `kb-card ${s.fresh.cls}` : 'kb-card',
+      // Each task, then its children: the ones in this column, then dotted stand-ins for ones moved to another column.
+      const here = new Set(shown.map((t) => t.id));
+      const elsewhere = board.columns.filter((c) => c.id !== col.id).flatMap((c) => c.tasks.map((t) => ({ t, colName: c.name })))
+        .filter(({ t }) => !(drag !== null && drag.kind === 'task' && drag.id === t.id) && taskMatches(t, filter));
+      const rows = [];
+      const walk = (t, depth) => {
+        const kids = shown.filter((k) => k.parent === t.id);
+        const away = elsewhere.filter((e) => e.t.parent === t.id);
+        const folded = s.collapsed.includes(t.id);
+        rows.push({ task: t, depth, kidCount: kids.length + away.length, folded });
+        if (folded) return;
+        for (const k of kids) walk(k, depth + 1);
+        for (const e of away) rows.push({ task: e.t, depth: depth + 1, awayIn: e.colName });
+      };
+      for (const t of shown) if (!here.has(t.parent)) walk(t, 0);
+      // A row's line carries on past it when a sibling (same depth) follows before anything shallower.
+      const carries = rows.map((r, i) => { for (const n of rows.slice(i + 1)) { if (n.depth <= r.depth) return n.depth === r.depth; } return false; });
+      const ancestorCarries = []; // [depth] = whether the latest row at that depth has a sibling still to come
+      const items = rows.map(({ task: t, depth, kidCount, folded, awayIn }, i) => {
+        ancestorCarries.length = depth;
+        // One vertical line per level: passing through for open ancestors, ├ / └ into this card at its own level.
+        const rails = [];
+        for (let k = 1; k <= depth; k++) {
+          const kind = k < depth ? (ancestorCarries[k] ? 'pass' : null) : (carries[i] ? 'tee' : 'end');
+          if (kind !== null) rails.push({ cls: `kb-rail kb-rail-${kind}`, style: `left: ${(k - 1 - depth) * INDENT + INDENT / 2 - 1}px` });
+        }
+        ancestorCarries[depth] = carries[i];
+        const indentStyle = depth === 0 ? '' : `margin-left: ${depth * INDENT}px`;
+        if (awayIn !== undefined) {
+          return {
+            id: `away:${t.id}`, isPlaceholder: false, isTask: false, isAway: true, rails, indentStyle,
+            title: t.title, awayIn: `→ ${awayIn}`, focusLabel: `Go to ${t.title} in ${awayIn}`,
+            focus: () => this.focusCard(t.id),
+          };
+        }
+        const parent = depth === 0 && t.parent !== '' ? everyTask.find((p) => p.id === t.parent) : undefined;
+        return {
+        ...cardView(t, true), isPlaceholder: false, isTask: true, isAway: false, obstacleId: `card:${t.id}`,
+        indentStyle, rails,
+        hasKids: kidCount > 0, expanded: !folded,
+        foldText: folded ? String(kidCount) : '',
+        foldLabel: `${folded ? 'Show' : 'Hide'} ${kidCount} child task${kidCount === 1 ? '' : 's'} of ${t.title}`,
+        toggleFold: () => { if (!this.suppressClick) this.setState({ collapsed: folded ? s.collapsed.filter((id) => id !== t.id) : [...s.collapsed, t.id] }); },
+        // A child away from its parent (another column, the archive, filtered out) still names it.
+        hasParentHint: parent !== undefined, parentHint: parent === undefined ? '' : `↳ ${parent.title}`,
+        openParent: () => { if (!this.suppressClick) this.openTask(t.parent); },
+        addChildLabel: `Add child task to ${t.title}`,
+        onAddChild: () => { if (!this.suppressClick) this.createTask(col.id, t.id); },
+        cardClass: ['kb-card', ...(kidCount > 0 ? ['kb-card-haskids'] : []), ...(s.fresh !== null && s.fresh.id === t.id ? [s.fresh.cls] : []), ...(ancestors.has(t.id) ? ['kb-card-ancestor'] : [])].join(' '),
         onPointerDown: (e) => {
           if (e.target instanceof Element && e.target.closest('input,textarea,select') !== null) return;
           this.beginDrag(e, 'task', t.id, e.currentTarget);
         },
         open: () => { if (!this.suppressClick) this.openTask(t.id); },
-      }));
+        };
+      });
       if (drag !== null && drag.kind === 'task' && drag.target !== null && drag.target.colId === col.id) {
         const idx = drag.target.beforeId === null ? items.length : items.findIndex((it) => it.id === drag.target.beforeId);
         items.splice(idx < 0 ? items.length : idx, 0, placeholder(null, drag.h));
@@ -3189,6 +3355,7 @@ class Component extends DCLogic {
       const view = {
         isPlaceholder: false, isColumn: true, id: col.id,
         nameValue: nameKey in s.drafts ? s.drafts[nameKey] : col.name,
+        nameRef: `${this.uid}.${col.id}`,
         nameError: s.fieldErrors[nameKey] ?? null,
         countLabel: hidden > 0 ? `${visible.length}/${col.tasks.length}` : String(col.tasks.length),
         gripLabel: `Drag column ${col.name}`,
@@ -3202,25 +3369,7 @@ class Component extends DCLogic {
         onName: (e) => { const raw = e.target.value; this.editField(nameKey, raw, (b) => renameColumn(b, col.id, raw.trim())); },
         onNameBlur: () => this.endField(nameKey),
         onDelete: () => this.commit((b) => deleteColumn(b, col.id)),
-        onAddTask: () => {
-          const at = this.nowIso();
-          const kind = this.pickEffect('create');
-          let created = null;
-          const ok = this.commit((b) => { created = addTask(b, col.id, 'New task', at); return created.board; });
-          if (!ok) return;
-          const id = created.id;
-          this.setState({ editingTaskId: id, drafts: {}, fieldErrors: {}, tagInput: '', pickerOpen: false, historyOpen: false, fresh: kind === null ? null : { id, cls: ENTRY_CLASS[kind] } }, () => {
-            // Focus the title with its placeholder text selected, so typing replaces it (next frame: the panel has rendered by then).
-            window.requestAnimationFrame(() => {
-              const input = document.querySelector(`[data-kb-title="${this.uid}"]`);
-              if (input !== null) { input.focus(); input.select(); }
-            });
-            // A filter can hide the new card; then there is nothing on screen to animate and only the panel opens.
-            const rect = this.cardRect(id);
-            if (rect !== null) this.playEffect(kind, rect);
-            window.setTimeout(() => { if (this.state.fresh !== null && this.state.fresh.id === id) this.setState({ fresh: null }); }, 1000);
-          });
-        },
+        onAddTask: () => this.createTask(col.id, ''),
       };
       return [view];
     });
@@ -3308,7 +3457,14 @@ class Component extends DCLogic {
           const rect = this.cardRect(t.id) ?? this.elRect(e.currentTarget);
           if (this.commit((b) => deleteTask(b, t.id), { editingTaskId: null })) this.playEffect(kind, rect);
         },
+        // Keyed to the task so the menu never reappears open on the next task.
+        completeMenuOpen: s.completeMenuFor === t.id,
+        toggleCompleteMenu: () => this.setState({ completeMenuFor: s.completeMenuFor === t.id ? null : t.id }),
+        closeCompleteMenu: () => this.setState({ completeMenuFor: null }),
+        completeMenuKey: (e) => { if (e.key === 'Escape') this.setState({ completeMenuFor: null }); },
         completeDisabled: c === null,
+        addChildTitle: c === null ? 'Restore it first' : 'A new task under this one, in the same column',
+        onAddChild: () => { if (c !== null) this.createTask(c.id, t.id); },
         completeLabel: c === null ? 'Archived' : 'Mark complete',
         completeTitle: c === null ? 'Already in the archive' : 'Moves it to the archive (see the Archive view)',
         historyOpen: s.historyOpen,
@@ -3406,7 +3562,14 @@ class Component extends DCLogic {
       archiveCountLabel: board.archive.length === 1 ? '1 task' : `${board.archive.length} tasks`,
 
       columns: columnViews,
-      addColumn: () => this.commit((b) => addColumn(b, `Column ${b.columns.length + 1}`).board),
+      addColumn: () => {
+        let id = null;
+        // Focus the new name with its placeholder text selected, so typing replaces it (next frame: the column has rendered by then).
+        this.commit((b) => { const r = addColumn(b, `Column ${b.columns.length + 1}`); id = r.id; return r.board; }, null, () => window.requestAnimationFrame(() => {
+          const input = document.querySelector(`[data-kb-col="${this.uid}.${id}"]`);
+          if (input !== null) { input.focus(); input.select(); }
+        }));
+      },
 
       sourceText,
       saveStatus: s.saveStatus,

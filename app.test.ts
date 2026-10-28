@@ -24,11 +24,11 @@ function load(search = "", store: Store = {}, fetch?: (u: string) => Response) {
   };
   g.window = g;
   const names = Object.keys(g);
-  const mod = new Function("DCLogic", ...names, js + "\nreturn { Component, parseBoard, serializeBoard, SEED_MD, THEMES, BASE_VARS, defaultSettings };")(DCLogic, ...names.map(k => g[k]));
+  const mod = new Function("DCLogic", ...names, js + "\nreturn { Component, parseBoard, serializeBoard, deleteTask, moveTask, SEED_MD, THEMES, BASE_VARS, defaultSettings };")(DCLogic, ...names.map(k => g[k]));
   const make = () => { const c = new mod.Component({ startTheme: "minimal" }); c.componentDidMount(); return c; };
   return { ...mod, make, store, g };
 }
-const { Component: C, parseBoard, serializeBoard, SEED_MD } = load();
+const { Component: C, parseBoard, serializeBoard, deleteTask, moveTask, SEED_MD } = load();
 const KEYS = C.KEYS;
 const other = SEED_MD.replace("# Sprint 14", "# Elsewhere");
 
@@ -240,4 +240,45 @@ test("opening a board or starting a new one clears the undo history", async () =
   expect([c.renderVals().canUndo, c.renderVals().canRedo]).toEqual([false, false]);
   c.renderVals().addColumn(); c.newBoard();
   expect(c.renderVals().canUndo).toBe(false);
+});
+
+test("child tasks nest under their parent, round-trip as '- parent:', and move up a level when the parent is deleted", () => {
+  const { make, g } = load();
+  g.elements = { "data-kb-root": { offsetWidth: 1, getBoundingClientRect: () => ({ left: 0, top: 0, width: 1 }), querySelector: () => null } };
+  const c = make();
+  const col = () => c.state.board.columns[0];
+  const parent = col().tasks[0].id;
+  c.renderVals().columns[0].onAddTask();                          // a plain task after the parent
+  const sibling = c.state.editingTaskId;
+  c.renderVals().columns[0].items.find((it: any) => it.id === parent).onAddChild();
+  const child = c.state.editingTaskId;
+  c.renderVals().editor.onAddChild();                             // grandchild, from the task panel
+  const grandchild = c.state.editingTaskId;
+  const order = () => col().tasks.map((t: any) => t.id);
+  expect(order().indexOf(child)).toBe(order().indexOf(parent) + 1);   // stored right under the parent, ahead of later tasks
+  expect(order().indexOf(grandchild)).toBe(order().indexOf(child) + 1);
+  expect(order().indexOf(sibling)).toBeGreaterThan(order().indexOf(grandchild));
+  const item = (id: string) => c.renderVals().columns[0].items.find((it: any) => it.id === id);
+  expect([item(parent).indentStyle, item(child).indentStyle, item(grandchild).indentStyle]).toEqual(["", "margin-left: 18px", "margin-left: 36px"]);
+  expect(item(grandchild).rails.map((r: any) => r.cls)).toEqual(["kb-rail kb-rail-end"]);   // child has no later sibling, so no pass-through line
+  const lit = () => c.renderVals().columns[0].items.filter((it: any) => it.cardClass.includes("kb-card-ancestor")).map((it: any) => it.id);
+  expect(lit()).toEqual([parent, child]);                         // grandchild is open: its whole chain of parents lights up
+  c.renderVals().closeEditor();
+  expect(lit()).toEqual([]);
+  const md = serializeBoard(c.state.board);
+  expect(md).toContain(`- id: ${grandchild}\n- parent: ${child}\n`);
+  expect(serializeBoard(parseBoard(md))).toBe(md);
+  expect(() => parseBoard(md.replace(`- parent: ${child}`, "- parent: nope"))).toThrow('parent "nope"');
+  // Moved to another column: a dotted stand-in stays under the parent, and the real card names its parent.
+  c.commit((b: any) => moveTask(b, grandchild, c.state.board.columns[1].id, null, "2026-10-28T00:00:00Z"));
+  const ids = () => c.renderVals().columns[0].items.map((it: any) => it.id);
+  expect(ids().slice(ids().indexOf(parent), ids().indexOf(parent) + 3)).toEqual([parent, child, `away:${grandchild}`]);
+  expect(item(`away:${grandchild}`).indentStyle).toBe("margin-left: 36px");
+  expect(c.renderVals().columns[1].items.find((it: any) => it.id === grandchild).hasParentHint).toBe(true);
+  item(parent).toggleFold();                                      // fold: the parent's children (and their stand-ins) hide
+  expect([ids().includes(child), ids().includes(`away:${grandchild}`), item(parent).foldText]).toEqual([false, false, "1"]);
+  item(parent).toggleFold();
+  expect(ids().includes(child)).toBe(true);
+  const after = deleteTask(c.state.board, child);
+  expect(after.columns.flatMap((col: any) => col.tasks).find((t: any) => t.id === grandchild).parent).toBe(parent);
 });

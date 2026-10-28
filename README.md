@@ -10,6 +10,7 @@ style. This repo is the app. Your board can live in its own repo and be loaded w
 - **Board**, **Split** (board beside its markdown), **Archive** and **Markdown** views.
 - The **☰ menu** holds **New**, **Open**, **Save**, **Download** and **Style**.
 - **New** starts a blank board (To Do, Doing, Done) in the current style, after asking, since it replaces the board saved in this browser.
+- **Child tasks**: the **+** on a card (on hover) or **Create child task** in the task panel adds a task under it, nested as deep as you like. Children sit indented beneath their parent with a connecting line; one moved to another column shows "↳ parent", and leaves a dotted stand-in under the parent that jumps to it. The chevron on a parent folds its children away. Saved as `- parent: t-03`.
 - **Undo / Redo** (↶ ↷, or Ctrl/⌘ Z and Ctrl/⌘ Shift Z / Ctrl Y) step back through every change, up to 100. Typing in one field counts as one step; opening a board or starting a new one clears the history.
 - **Open**: drop a `.md` file, choose one, open one from a URL (GitHub file links work) or pick a recent one.
 - **Save** writes the board to a file you pick once, then to the same file each time (Ctrl/⌘ S). Browsers
