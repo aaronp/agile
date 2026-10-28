@@ -10,7 +10,7 @@
 <body>
 <x-dc>
 <helmet>
-<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500&amp;family=JetBrains+Mono:wght@400;600&amp;family=Newsreader:opsz,wght@6..72,400;6..72,600&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500&amp;family=JetBrains+Mono:wght@400;600&amp;family=Newsreader:opsz,wght@6..72,400;6..72,600&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;family=Bricolage+Grotesque:wght@500;700&amp;family=Fraunces:opsz,wght@9..144,400;9..144,600&amp;display=swap" rel="stylesheet">
 <style>
 body{margin:0}
 *{box-sizing:border-box}
@@ -667,7 +667,7 @@ a.kb-menu-item{color:inherit;text-decoration:none}
   </sc-if>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"startTheme":{"editor":"enum","options":["minimal","paper","terminal","ocean","ballpit"],"default":"minimal","section":"Board"},"$preview":{"width":1440,"height":900}}'>
+<script type="text/x-dc" data-dc-script data-props='{"startTheme":{"editor":"enum","options":["minimal","paper","terminal","ocean","ballpit","graph","night","blueprint","ledger"],"default":"minimal","section":"Board"},"$preview":{"width":1440,"height":900}}'>
 /* =====================================================================
  * Markdown agile board.
  * Layers: (1) schema + validation, (2) markdown parse/serialize,
@@ -1586,6 +1586,38 @@ const BASE_VARS = {
 };
 
 /**
+ * The Decision Ledger styles (aaronp.github.io/adr): one palette each, mapped onto the board's variables.
+ * `grid` draws the ruled-paper background.
+ */
+const PLEX_SANS = "'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif";
+const PLEX_MONO = "'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace";
+function ledgerTheme({ id, name, blurb, dark, grid, radius, display, c }) {
+  return {
+    id, name, blurb, effect: null,
+    settings: {
+      accent: { type: 'color', label: 'Accent', default: c.mark, doc: 'Selection, focus rings, active toggles.' },
+      grid: { type: 'boolean', label: 'Grid', default: grid, doc: 'Ruled grid behind the columns.' },
+    },
+    vars: (s) => ({
+      '--bg': s.grid ? `linear-gradient(${c.grid} 1px, transparent 1px) 0 0 / 24px 24px, linear-gradient(90deg, ${c.grid} 1px, transparent 1px) 0 0 / 24px 24px, ${c.bg}` : c.bg,
+      '--fg': c.ink, '--muted': c.muted, '--line': c.border, '--surface': rgba(c.mutedBg, 0.7), '--control': c.surface,
+      '--card': c.surface, '--card-fg': c.ink, '--card-muted': c.muted, '--card-border': c.border,
+      '--card-shadow': dark ? 'none' : '0 1px 2px rgba(0,0,0,.06)', '--card-shadow-hover': `0 0 0 1px ${c.borderStrong}`,
+      '--header-bg': c.bg, '--panel': c.surface, '--panel-fg': c.ink, '--panel-muted': c.muted,
+      '--panel-control': c.surface2, '--panel-line': c.controlBorder,
+      '--source-bg': c.surface, '--placeholder': c.highlight, '--col-head-fg': c.ink,
+      '--accent': s.accent, '--accent-fg': readableOn(s.accent), '--radius': radius,
+      '--pad': '12px', '--gap': '10px', '--col-pad': '10px', '--card-title-size': '14px',
+      '--font': PLEX_SANS, '--font-title': display, '--mono': PLEX_MONO,
+      '--tag-l': dark ? '0.36' : '0.92', '--tag-c': dark ? '0.07' : '0.05', '--tag-fg': c.ink,
+      '--danger-bg': c.badBg, '--danger-fg': c.badFg, '--code-bg': c.mutedBg,
+    }),
+    swatch: (s) => [c.bg, c.ink, s.accent],
+  };
+}
+const BRICOLAGE = "'Bricolage Grotesque', system-ui, sans-serif";
+
+/**
  * Theme = {
  *   id: stable key (stored with the user's choice),
  *   name / blurb: picker copy,
@@ -1712,6 +1744,22 @@ const THEMES = [
     }),
     swatch: (s) => [s.background, ...BALL_PALETTES[s.palette].slice(0, 2)],
   },
+  ledgerTheme({
+    id: 'graph', name: 'Graph paper', blurb: 'Ruled grid, crisp ink.', dark: false, grid: true, radius: '6px', display: BRICOLAGE,
+    c: { bg: '#f2f4f3', surface: '#ffffff', surface2: '#f7f8f7', mutedBg: '#ecefed', grid: '#dfe3e1', border: '#d9dddb', controlBorder: '#c5cbc8', borderStrong: '#8a9197', ink: '#15181c', muted: '#4d555c', mark: '#e0662b', highlight: '#f1f5fe', badBg: '#f8e1e3', badFg: '#7e1f2f' },
+  }),
+  ledgerTheme({
+    id: 'night', name: 'Night shift', blurb: 'Graph paper after dark.', dark: true, grid: false, radius: '6px', display: BRICOLAGE,
+    c: { bg: '#111316', surface: '#1a1d21', surface2: '#20242a', mutedBg: '#23272d', grid: '#2c3137', border: '#2e333a', controlBorder: '#444b53', borderStrong: '#6b737b', ink: '#ecefed', muted: '#a9b0b6', mark: '#ff8a4c', highlight: '#1e2635', badBg: '#3a1d22', badFg: '#ffc2ca' },
+  }),
+  ledgerTheme({
+    id: 'blueprint', name: 'Blueprint', blurb: 'White lines on drafting blue.', dark: true, grid: true, radius: '2px', display: PLEX_MONO,
+    c: { bg: '#0f2747', surface: '#133059', surface2: '#17386a', mutedBg: '#0c2240', grid: '#1d4072', border: '#2a4f84', controlBorder: '#4a74b0', borderStrong: '#7fa3d6', ink: '#f1f6ff', muted: '#b4c8e8', mark: '#ffb347', highlight: '#1c4479', badBg: '#4a1f33', badFg: '#ffd0d6' },
+  }),
+  ledgerTheme({
+    id: 'ledger', name: 'Warm ledger', blurb: 'Cream stock, rust ink, serif heads.', dark: false, grid: false, radius: '4px', display: "'Fraunces', Georgia, 'Times New Roman', serif",
+    c: { bg: '#f5f0e6', surface: '#fffdf8', surface2: '#f9f4ea', mutedBg: '#ede5d6', grid: '#e2d8c5', border: '#ddd2be', controlBorder: '#c9bba3', borderStrong: '#8f806a', ink: '#231c14', muted: '#5c5044', mark: '#c8642b', highlight: '#f7ebdd', badBg: '#f3dcd6', badFg: '#7a1f1f' },
+  }),
 ];
 
 function themeById(id) {

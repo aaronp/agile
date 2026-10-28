@@ -15,7 +15,7 @@ style. This repo is the app. Your board can live in its own repo and be loaded w
 - **Open**: drop a `.md` file, choose one, open one from a URL (GitHub file links work) or pick a recent one.
 - **Save** writes the board to a file you pick once, then to the same file each time (Ctrl/⌘ S). Browsers
   without a file picker (Firefox, Safari) download it instead. **Download** always downloads `<title>.md`.
-- Five styles (Minimal, Paper, Terminal, Ocean, Ball pit), with their settings stored in the file.
+- Nine styles (Minimal, Paper, Terminal, Ocean, Ball pit, plus Graph paper, Night shift, Blueprint and Warm ledger from [Decision Ledger](https://aaronp.github.io/adr/)), with their settings stored in the file.
 
 Edits are saved in this browser (localStorage), except for a board opened from a URL. **The `.md` file is the
 real copy**, so keep it in git.
@@ -27,7 +27,7 @@ real copy**, so keep it in git.
 | `?view=` | `board` (default), `split`, `archive` or `markdown` |
 | `?q=` `?tags=a,b` `?owners=a,b` | Search text and filters |
 | `?task=<id>` | Opens that task, e.g. `?task=t-07` |
-| `?theme=` | `minimal`, `paper`, `terminal`, `ocean` or `ballpit`, without changing the file. Picking a style saves it in the file. |
+| `?theme=` | `minimal`, `paper`, `terminal`, `ocean`, `ballpit`, `graph`, `night`, `blueprint` or `ledger`, without changing the file. Picking a style saves it in the file. |
 
 The address bar follows the app, so any view can be bookmarked or shared. Files on another host must allow
 CORS (GitHub Pages and raw.githubusercontent.com both do).
