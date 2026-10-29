@@ -102,7 +102,7 @@ body{margin:0}
 .kb-fmt:hover{opacity:1;background:var(--code-bg)}
 .kb-fmt-sep{margin-right:8px}
 .kb-md-editor textarea{border:0;border-radius:0;background:transparent;min-height:170px;font-family:var(--mono);font-size:12.5px;line-height:1.6;padding:10px 12px;resize:vertical;width:100%;outline:none}
-.kb-preview{min-height:120px;padding:12px;border:1px solid var(--line);border-radius:var(--radius);font-size:14px;line-height:1.5}
+.kb-preview{cursor:text;min-height:120px;padding:12px;border:1px solid var(--line);border-radius:var(--radius);font-size:14px;line-height:1.5}
 .kb-hint{margin:0;font-size:11.5px;color:var(--panel-muted);font-family:var(--mono)}
 .kb-card-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
 .kb-owner{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--card-muted);margin-left:auto}
@@ -551,7 +551,7 @@ a.kb-menu-item{color:inherit;text-decoration:none}
           <p class="kb-hint">**bold** *italic* `code` - list 1. list - [ ] todo &gt; quote</p>
         </sc-if>
         <sc-if value="{{editor.isPreview}}" hint-placeholder-val="{{ false }}">
-          <div class="kb-preview md">
+          <div class="kb-preview md" title="Click to edit" onClick="{{editor.editFromPreview}}">
             <sc-for list="{{editor.preview}}" as="blk" hint-placeholder-count="1"><sc-if value="{{blk.isPara}}" hint-placeholder-val="{{ true }}"><p class="md-p"><sc-for list="{{blk.spans}}" as="sp"><sc-if value="{{sp.isLink}}" hint-placeholder-val="{{ false }}"><a class="{{sp.cls}}" href="{{sp.href}}" target="_blank" rel="noopener noreferrer">{{sp.text}}</a></sc-if><sc-if value="{{sp.isPlain}}" hint-placeholder-val="{{ true }}"><span class="{{sp.cls}}">{{sp.text}}</span></sc-if></sc-for></p></sc-if><sc-if value="{{blk.isHeading}}" hint-placeholder-val="{{ false }}"><p class="md-h"><sc-for list="{{blk.spans}}" as="sp"><sc-if value="{{sp.isLink}}" hint-placeholder-val="{{ false }}"><a class="{{sp.cls}}" href="{{sp.href}}" target="_blank" rel="noopener noreferrer">{{sp.text}}</a></sc-if><sc-if value="{{sp.isPlain}}" hint-placeholder-val="{{ true }}"><span class="{{sp.cls}}">{{sp.text}}</span></sc-if></sc-for></p></sc-if><sc-if value="{{blk.isQuote}}" hint-placeholder-val="{{ false }}"><blockquote class="md-q"><sc-for list="{{blk.spans}}" as="sp"><sc-if value="{{sp.isLink}}" hint-placeholder-val="{{ false }}"><a class="{{sp.cls}}" href="{{sp.href}}" target="_blank" rel="noopener noreferrer">{{sp.text}}</a></sc-if><sc-if value="{{sp.isPlain}}" hint-placeholder-val="{{ true }}"><span class="{{sp.cls}}">{{sp.text}}</span></sc-if></sc-for></blockquote></sc-if><sc-if value="{{blk.isCode}}" hint-placeholder-val="{{ false }}"><pre class="md-pre"><code>{{blk.text}}</code></pre></sc-if><sc-if value="{{blk.isRule}}" hint-placeholder-val="{{ false }}"><hr class="md-hr"></sc-if><sc-if value="{{blk.isList}}" hint-placeholder-val="{{ false }}"><ul class="md-list"><sc-for list="{{blk.items}}" as="li"><li class="md-li" style="{{li.style}}"><sc-if value="{{li.isCheck}}" hint-placeholder-val="{{ false }}"><input type="checkbox" aria-label="{{li.checkLabel}}" checked="{{li.checked}}" onChange="{{li.toggle}}"></sc-if><sc-if value="{{li.isMarker}}" hint-placeholder-val="{{ true }}"><span class="md-marker" aria-hidden="true">{{li.marker}}</span></sc-if><span class="{{li.bodyCls}}"><sc-for list="{{li.spans}}" as="sp"><sc-if value="{{sp.isLink}}" hint-placeholder-val="{{ false }}"><a class="{{sp.cls}}" href="{{sp.href}}" target="_blank" rel="noopener noreferrer">{{sp.text}}</a></sc-if><sc-if value="{{sp.isPlain}}" hint-placeholder-val="{{ true }}"><span class="{{sp.cls}}">{{sp.text}}</span></sc-if></sc-for></span></li></sc-for></ul></sc-if></sc-for>
             <sc-if value="{{editor.previewEmpty}}" hint-placeholder-val="{{ false }}"><p class="md-p kb-muted">Nothing to preview yet.</p></sc-if>
           </div>
@@ -2781,7 +2781,7 @@ class Component extends DCLogic {
       drafts: {},
       fieldErrors: {},
       tagInput: '',
-      descTab: 'write',
+      descTab: 'preview',
       historyOpen: false,
       now: Date.now(),
       drag: null,
@@ -2937,6 +2937,8 @@ class Component extends DCLogic {
       if (!(e.metaKey || e.ctrlKey) || e.altKey) return;
       const key = e.key.toLowerCase();
       if (key === 's') { e.preventDefault(); this.save(); return; }
+      // Cmd/Ctrl+Enter is the task drawer's Ok.
+      if (key === 'enter' && this.state.editingTaskId !== null && this.state.completeDialogFor === null) { e.preventDefault(); this.setState({ editingTaskId: null, drafts: {}, fieldErrors: {}, tagInput: '' }); return; }
       if (key !== 'z' && key !== 'y') return;
       // Text fields keep the browser's own undo for what's being typed.
       if (typeof e.target?.closest === 'function' && e.target.closest('input,textarea,select,[contenteditable]') !== null) return;
@@ -3236,7 +3238,7 @@ class Component extends DCLogic {
     }
   }
 
-  openTask(id) { this.setState({ editingTaskId: id, tagInput: '', drafts: {}, fieldErrors: {}, pickerOpen: false, historyOpen: false }); }
+  openTask(id) { this.setState({ editingTaskId: id, descTab: 'preview', tagInput: '', drafts: {}, fieldErrors: {}, pickerOpen: false, historyOpen: false }); }
 
   /* ---- description editor (toolbar, shortcuts, list continuation) ---- */
   setDescription(taskId, res) {
@@ -3346,7 +3348,7 @@ class Component extends DCLogic {
     const ok = this.commit((b) => { created = addTask(b, colId, parent === '' ? 'New task' : 'New child task', at, parent); return created.board; });
     if (!ok) return;
     const id = created.id;
-    this.setState({ editingTaskId: id, drafts: {}, fieldErrors: {}, tagInput: '', pickerOpen: false, historyOpen: false, fresh: kind === null ? null : { id, cls: ENTRY_CLASS[kind] } }, () => {
+    this.setState({ editingTaskId: id, descTab: 'preview', drafts: {}, fieldErrors: {}, tagInput: '', pickerOpen: false, historyOpen: false, fresh: kind === null ? null : { id, cls: ENTRY_CLASS[kind] } }, () => {
       // Focus the title with its placeholder text selected, so typing replaces it (next frame: the panel has rendered by then).
       window.requestAnimationFrame(() => {
         const input = document.querySelector(`[data-kb-title="${this.uid}"]`);
@@ -3507,6 +3509,10 @@ class Component extends DCLogic {
         isPreview: s.descTab === 'preview',
         showWrite: () => this.setState({ descTab: 'write' }),
         showPreview: () => this.setState({ descTab: 'preview' }),
+        editFromPreview: (e) => {
+          if (e.target.closest('a') !== null) return; // let links open
+          this.setState({ descTab: 'write' }, () => document.querySelector(`[data-kb-desc="${this.uid}"]`)?.focus());
+        },
         formatButtons: FORMAT_BUTTONS.map((fb) => ({
           label: fb.label, d: fb.d,
           title: fb.keys === '' ? fb.label : `${fb.label} (${fb.keys})`,
