@@ -282,3 +282,11 @@ test("child tasks nest under their parent, round-trip as '- parent:', and move u
   const after = deleteTask(c.state.board, child);
   expect(after.columns.flatMap((col: any) => col.tasks).find((t: any) => t.id === grandchild).parent).toBe(parent);
 });
+
+test("the markdown is stamped with its format version", () => {
+  const md = serializeBoard(parseBoard(SEED_MD));
+  expect(md.startsWith("---\nversion: 1\n")).toBe(true);
+  expect(serializeBoard(parseBoard("# Bare\n"))).toStartWith("---\nversion: 1\n---\n# Bare");
+  expect(() => parseBoard("---\nversion: 99\n---\n# Future\n")).toThrow(/newer than this app/);
+  expect(() => parseBoard("---\nversion: one\n---\n# Bad\n")).toThrow(/whole number/);
+});

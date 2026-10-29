@@ -786,11 +786,14 @@ const Column = T.Object({
 /**
  * Board-level settings, written as YAML-style front matter at the top of the file:
  *   ---
+ *   version: 1
  *   theme: ocean
  *   ocean.swell: 0.6
  *   effects.complete: fireworks
  *   ---
- * The block is optional and lists only values that differ from the defaults; anything absent means "default".
+ * "version" stamps the file format (DATA_VERSION) and is always written; it isn't kept in memory because
+ * parsing brings any older file up to date. Files without it are version 1.
+ * The rest lists only values that differ from the defaults; anything absent means "default".
  * In memory every value is present, so the UI never has to ask "is this set?".
  */
 const Settings = T.Object({
@@ -828,6 +831,9 @@ const Settings = T.Object({
     },
   }),
 }, { doc: 'Look and feel that travels with the board file.' });
+
+/** Markdown format version. Bump it when the format changes, and upgrade older versions in parseSettings/parseBoard. */
+const DATA_VERSION = 1;
 
 const DEFAULT_THEME = 'minimal';
 function defaultBoardSettings() {
@@ -907,13 +913,18 @@ function parseSettings(lines, first) {
     if (seen.has(key)) fail(`Line ${i + 1}: "${key}" is already set on line ${seen.get(key) + 1}`);
     seen.set(key, i);
     const where = (msg) => fail(`Line ${i + 1}: ${msg}`);
+    if (key === 'version') {
+      if (!/^[1-9][0-9]*$/.test(value)) where(`version must be a whole number like ${DATA_VERSION}`);
+      if (Number(value) > DATA_VERSION) where(`this board is format version ${value}, newer than this app understands (${DATA_VERSION}); open it with a newer copy`);
+      return;
+    }
     if (key === 'theme') {
       if (!THEMES.some((t) => t.id === value)) where(`unknown theme "${value}" (expected ${THEMES.map((t) => t.id).join(', ')})`);
       settings.theme = value;
       return;
     }
     const [scope, name] = key.split('.');
-    if (name === undefined) where(`unknown setting "${key}" (expected theme, effects.<event> or <theme>.<setting>)`);
+    if (name === undefined) where(`unknown setting "${key}" (expected version, theme, effects.<event> or <theme>.<setting>)`);
     if (scope === 'effects') {
       if (!(name in EVENT_EFFECTS)) where(`unknown effect event "${name}" (expected ${Object.keys(EVENT_EFFECTS).join(', ')})`);
       if (!effectChoices(name).includes(value)) where(`"${value}" is not an effect for ${name} (expected ${effectChoices(name).join(', ')})`);
@@ -936,7 +947,7 @@ function parseSettings(lines, first) {
 
 function serializeSettings(settings) {
   const defaults = defaultBoardSettings();
-  const out = [];
+  const out = [`version: ${DATA_VERSION}`];
   if (settings.theme !== defaults.theme) out.push(`theme: ${settings.theme}`);
   for (const t of THEMES) {
     for (const k of Object.keys(t.settings)) {
@@ -1104,7 +1115,7 @@ function serializeTask(t) {
 function serializeBoard(board) {
   validateBoard(board);
   const front = serializeSettings(board.settings);
-  const out = front.length === 0 ? [] : ['---', ...front, '---'];
+  const out = ['---', ...front, '---'];
   out.push(`# ${board.title}`, '');
   for (const col of board.columns) {
     out.push(`## ${col.name}`, '');
@@ -1708,6 +1719,7 @@ const THEMES = [
       wake: { type: 'range', label: 'Wake', min: 0, max: 2, step: 0.05, default: 1, doc: 'How hard a dragged card pushes the water.' },
       damping: { type: 'range', label: 'Calm', min: 0.95, max: 0.998, step: 0.001, default: 0.985, doc: 'How long ripples last (higher = longer).' },
       glass: { type: 'range', label: 'Card glass', min: 0.6, max: 1, step: 0.02, default: 0.86, doc: 'Card opacity; lower shows more water.' },
+      mouse: { type: 'boolean', label: 'Mouse affects style', default: true, doc: 'Moving the mouse makes wakes, not just dragging cards.' },
     },
     vars: (s) => ({
       '--bg': s.deep, '--fg': '#f1f8fb', '--muted': '#c3dbe5', '--line': 'rgba(255,255,255,.22)', '--surface': 'transparent', '--control': 'rgba(4,28,42,.55)',
@@ -1731,6 +1743,7 @@ const THEMES = [
       gravity: { type: 'range', label: 'Gravity', min: 0, max: 2000, step: 50, default: 900, doc: 'Downward pull in px/s².' },
       bounce: { type: 'range', label: 'Bounciness', min: 0, max: 0.95, step: 0.05, default: 0.6, doc: 'Energy kept per bounce.' },
       palette: { type: 'select', label: 'Palette', options: Object.keys(BALL_PALETTES), default: 'candy', doc: 'Ball colours (respawns them).' },
+      mouse: { type: 'boolean', label: 'Mouse affects style', default: true, doc: 'Moving the mouse pushes balls, not just dragging cards.' },
     },
     vars: (s) => ({
       '--bg': s.background, '--fg': '#1d1b18', '--muted': '#5c574f', '--line': 'rgba(0,0,0,.12)', '--surface': 'transparent', '--control': 'rgba(255,255,255,.85)',
@@ -2568,6 +2581,9 @@ const BURSTS = {
   pop: burstPop, supernova: burstSupernova,
 };
 
+/** Side of the square obstacle the cursor becomes when a theme's "mouse" setting is on. */
+const MOUSE_SIZE = 36;
+
 /** Pure: attach px/s velocities to obstacle rects using the previous frame's positions. */
 function withVelocities(prev, rects, dt) {
   const next = new Map();
@@ -2585,6 +2601,7 @@ function withVelocities(prev, rects, dt) {
 /* ---------- Seed board ---------- */
 
 const SEED_MD = `---
+version: 1
 effects.complete: random
 ---
 # Sprint 14
@@ -2896,7 +2913,8 @@ class Component extends DCLogic {
     this.suppressClick = false;
     this.bursts = [];
     this.burstDirty = false;
-    this.onWinMove = (e) => this.handlePointerMove(e);
+    this.mouse = null;
+    this.onWinMove = (e) => { this.mouse = { x: e.clientX, y: e.clientY }; this.handlePointerMove(e); };
     this.onWinUp = (e) => this.handlePointerUp(e);
     window.addEventListener('pointermove', this.onWinMove);
     window.addEventListener('pointerup', this.onWinUp);
@@ -3014,9 +3032,16 @@ class Component extends DCLogic {
         const id = el.getAttribute('data-obstacle');
         return { id, dragging: id.startsWith('drag:'), ...geo.local(el.getBoundingClientRect()) };
       });
+      const s = this.state.board.settings.themes[theme.id];
+      // The cursor acts like a small dragged card (skipped while a real drag is moving the water/balls).
+      if (s.mouse && this.mouse !== null && this.state.drag === null) {
+        const x = (this.mouse.x - geo.left) / geo.scale;
+        const y = (this.mouse.y - geo.top) / geo.scale;
+        rects.push({ id: 'drag:mouse', dragging: true, x: x - MOUSE_SIZE / 2, y: y - MOUSE_SIZE / 2, w: MOUSE_SIZE, h: MOUSE_SIZE });
+      }
       const { obstacles, memory } = withVelocities(this.obstacleMemory, rects, dt);
       this.obstacleMemory = memory;
-      this.fx.step(dt, { width: w, height: h, dpr, obstacles }, this.state.board.settings.themes[theme.id]);
+      this.fx.step(dt, { width: w, height: h, dpr, obstacles }, s);
     } catch (err) {
       this.fxFailedFor = theme.id;
       if (this.fx !== null) { this.fx.dispose(); this.fx = null; }
