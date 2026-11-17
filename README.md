@@ -8,7 +8,9 @@ style. This repo is the app. Your board can live in its own repo and be loaded w
 [Publishing your own board](#publishing-your-own-board)).
 
 - **Board**, **Split** (board beside its markdown), **Archive** and **Markdown** views.
-- The **☰ menu** holds **New**, **Open**, **Save**, **Download** and **Style**.
+- The **☰ menu** holds **New**, **Open**, **Save**, **Download**, **Copy link** and **Style**.
+- **Copy link** copies a URL with the whole board compressed into it (`#board=…`, deflate + base64url), plus the current view and filters. Opening it shows that board without overwriting the one saved in that browser, and edits to it update the `#board=` in the address bar; it lives in the hash, so it never reaches the server. Links over 2000 characters copy with a warning, since some apps cut them.
+- **Badge**: the top of the ☰ menu shows an SVG badge of task counts, like `B: 4 📋 | P: 2 ⏳ | D: 7 ✅`. Click it to download or copy the SVG and choose which columns it shows, each with a symbol (up to 6 characters), an icon and a color. The choice is saved in the file as `badge:` in the front matter.
 - **New** starts a blank board (To Do, Doing, Done) in the current style, after asking, since it replaces the board saved in this browser.
 - **Child tasks**: the **+** on a card (on hover) or **Create child task** in the task panel adds a task under it, nested as deep as you like. Children sit indented beneath their parent with a connecting line; one moved to another column shows "↳ parent", and leaves a dotted stand-in under the parent that jumps to it. The chevron on a parent folds its children away. Saved as `- parent: t-03`.
 - **Undo / Redo** (↶ ↷, or Ctrl/⌘ Z and Ctrl/⌘ Shift Z / Ctrl Y) step back through every change, up to 100. Typing in one field counts as one step; opening a board or starting a new one clears the history.

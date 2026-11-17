@@ -14,17 +14,18 @@ function load(search = "", store: Store = {}, fetch?: (u: string) => Response) {
     location: { search, href: "https://x.test/app/" + search, pathname: "/app/", hash: "" },
     localStorage: { getItem: (k: string) => store[k] ?? null, setItem: (k: string, v: string) => (store[k] = v), removeItem: (k: string) => delete store[k] },
     history: { entries: [] as string[],
-      pushState(_s: any, _t: string, u: string) { this.entries.push(u); g.location.search = u.includes("?") ? "?" + u.split("?")[1] : ""; },
-      replaceState(_s: any, _t: string, u: string) { g.location.search = u.includes("?") ? "?" + u.split("?")[1] : ""; } },
+      pushState(_s: any, _t: string, u: string) { this.entries.push(u); this.replaceState(_s, _t, u); },
+      replaceState(_s: any, _t: string, u: string) { const [p, h] = u.split("#"); g.location.search = p.includes("?") ? "?" + p.split("?")[1] : ""; g.location.hash = h === undefined ? "" : "#" + h; } },
     fetch: async (u: string) => fetch!(u),
     document: { querySelector: (sel: string) => g.elements?.[sel.split('=')[0].replace('[', '')] ?? null, getElementById: () => null, createElement: () => ({ click() {}, remove() {} }), body: { appendChild: (a: any) => (g.downloaded = a) } },
+    ClipboardItem: class { constructor(public items: Record<string, Promise<Blob>>) {} },
     navigator: {}, confirm: () => g.answer ?? true, setTimeout, clearTimeout, setInterval: () => 0, clearInterval() {},
     requestAnimationFrame: () => 0, cancelAnimationFrame() {}, addEventListener() {}, removeEventListener() {},
     URL: Object.assign(function (u: string, b?: string) { return new URL(u, b); }, { createObjectURL: () => "blob:x", revokeObjectURL() {} }),
   };
   g.window = g;
   const names = Object.keys(g);
-  const mod = new Function("DCLogic", ...names, js + "\nreturn { Component, parseBoard, serializeBoard, deleteTask, moveTask, SEED_MD, THEMES, BASE_VARS, defaultSettings };")(DCLogic, ...names.map(k => g[k]));
+  const mod = new Function("DCLogic", ...names, js + "\nreturn { Component, parseBoard, serializeBoard, badgeSvg, deleteTask, moveTask, SEED_MD, THEMES, BASE_VARS, defaultSettings };")(DCLogic, ...names.map(k => g[k]));
   const make = () => { const c = new mod.Component({ startTheme: "minimal" }); c.componentDidMount(); return c; };
   return { ...mod, make, store, g };
 }
@@ -131,14 +132,14 @@ test("the template's tags are balanced", () => {
     expect([tag, (tpl.match(new RegExp(`<${tag}[\\s>]`, "g")) ?? []).length]).toEqual([tag, (tpl.match(new RegExp(`</${tag}>`, "g")) ?? []).length]);
 });
 
-test("the menu holds New, Open, Save, Download and Style; New starts a blank board after confirming", async () => {
+test("the menu holds New, Open, Save, Download, Copy link and Style; New starts a blank board after confirming", async () => {
   const store: Store = { [KEYS.board]: other };
   const { make, g } = load("?view=split&task=t-01", store);
   const c = make();
   const menu = () => c.renderVals().menuItems.map((m: any) => m.label);
   expect(c.renderVals().menuOpen).toBe(false);
   c.renderVals().toggleMenu();
-  expect(menu()).toEqual(["New", "Open…", "Save", "Download", "Style"]);
+  expect(menu()).toEqual(["New", "Open…", "Save", "Download", "Copy link", "Style"]);
   const pick = (label: string) => c.renderVals().menuItems.find((m: any) => m.label === label).pick();
   pick("Style"); expect([c.state.menuOpen, c.state.pickerOpen]).toEqual([false, true]);
   pick("Open…"); expect([c.state.openOpen, c.state.pickerOpen]).toEqual([true, false]);
@@ -151,6 +152,77 @@ test("the menu holds New, Open, Save, Download and Style; New starts a blank boa
   expect(store[KEYS.board]).toContain("# Untitled board");
   expect(c.state.editingTaskId).toBe(null);
   expect(g.location.search).toBe("?view=split");
+});
+
+test("Copy link puts the board in the hash; opening that link shows it without overwriting the saved board", async () => {
+  const { make, g } = load("?src=b.md&view=split", {}, () => new Response(other));
+  const a = make(); await Bun.sleep(5);
+  let copied = "";
+  g.navigator.clipboard = { writeText: async (t: string) => { copied = t; } };
+  a.renderVals().menuItems.find((m: any) => m.label === "Copy link").pick(); await Bun.sleep(5);
+  expect(a.state.saveStatus).toBe("Link copied");
+  const u = new URL(copied);
+  expect([u.search, u.hash.startsWith("#board=")]).toEqual(["?view=split", true]);
+  const store: Store = { [KEYS.board]: SEED_MD };
+  const b = load(u.search, store); b.g.location.hash = u.hash;
+  const c = b.make(); await Bun.sleep(5);
+  expect(c.state.board.title).toBe("Elsewhere");
+  expect(c.persistBoard(c.state.board)).toContain("shared link");
+  expect(store[KEYS.board]).toBe(serializeBoard(parseBoard(SEED_MD)));
+});
+
+test("the badge: every column by default; settings pick columns, symbols and icons, and are saved in the file", () => {
+  const { make, badgeSvg } = load();
+  const c = make();
+  const counts = c.state.board.columns.map((col: any) => col.tasks.length);
+  const rows = () => c.renderVals().badgeRows;
+  expect(rows().map((r: any) => [r.column, r.symbol, r.icon, r.included])).toEqual([["Backlog", "B", "📋", true], ["To Do", "T", "⏳", true], ["Doing", "D", "⏳", true], ["Done", "D", "✅", true]]);
+  expect(c.renderVals().badgeAlt).toBe(`B: ${counts[0]} 📋 | T: ${counts[1]} ⏳ | D: ${counts[2]} ⏳ | D: ${counts[3]} ✅`);
+  rows()[1].toggle();                                                    // leave out To Do
+  rows()[2].onSymbol({ target: { value: "P" } });
+  rows()[2].onSymbol({ target: { value: "TOOLONG" } });                  // over 6: shown, not saved
+  expect([rows()[2].symbol, rows()[2].error]).toEqual(["TOOLONG", "symbol can be at most 6 characters"]);
+  rows()[2].onSymbol({ target: { value: "P" } });
+  rows()[3].onIcon({ target: { value: "🎉" } });
+  expect(rows()[3].icons.map((o: any) => o.label)).toContain("🚀");        // the icon list always offers every icon
+  rows()[0].onColor({ target: { value: "#112233" } });
+  expect(rows().map((r: any) => r.fill)).toEqual(["#112233", "#3b6fd8", "#b7791f", "#2f855a"]);
+  const md = serializeBoard(c.state.board);
+  expect(md).toContain('badge: [["Backlog","B","📋","#112233"],["Doing","P","⏳",""],["Done","D","🎉",""]]');
+  const svg = badgeSvg(parseBoard(md));
+  expect(svg).toContain(`aria-label="B: ${counts[0]} 📋 | P: ${counts[2]} ⏳ | D: ${counts[3]} 🎉"`);
+  expect(svg).toStartWith("<svg"); expect(svg).toContain('rx="10"'); expect(svg).toContain('fill="#112233"');
+  expect(() => parseBoard(md.replace('"#112233"', '"red"'))).toThrow("color must be like");
+  expect(parseBoard(md.replace(',"#112233"]', ']')).settings.badge[0]).toEqual({ column: "Backlog", symbol: "B", icon: "📋", color: "" }); // links made before colors
+  expect(() => parseBoard(md.replace('"P"', '"PPPPPPP"'))).toThrow("symbol can be at most 6");
+  c.renderVals().resetBadge();
+  expect(serializeBoard(c.state.board)).not.toContain("badge:");
+});
+
+test("Copy link hands Safari a pending ClipboardItem; a shared board's edits follow into the address bar", async () => {
+  const { make, g } = load("", {}, () => new Response(other));
+  const a = make();
+  let copied = "";
+  g.navigator.clipboard = { write: async ([item]: any) => { copied = await (await item.items["text/plain"]).text(); } };
+  a.copyLink(); await Bun.sleep(5);
+  expect([a.state.saveStatus, copied.includes("#board=")]).toEqual(["Link copied", true]);
+  const b = load(""); b.g.location.hash = new URL(copied).hash;
+  const c = b.make(); await Bun.sleep(5);
+  c.commit((x: any) => ({ ...x, title: "Edited" })); await Bun.sleep(5);
+  const d = load(""); d.g.location.hash = b.g.location.hash;               // the address bar now opens the edited board
+  const e = d.make(); await Bun.sleep(5);
+  expect(e.state.board.title).toBe("Edited");
+});
+
+test("Copy link warns when the link is long", async () => {
+  const { make, g } = load();
+  const c = make();
+  g.navigator.clipboard = { writeText: async () => {} };
+  c.copyLink(); await Bun.sleep(5);
+  expect(c.state.saveStatus).toBe("Link copied");
+  c.commit((b: any) => ({ ...b, columns: b.columns.map((col: any, i: number) => i ? col : { ...col, tasks: col.tasks.map((t: any) => ({ ...t, description: Array.from({ length: 40 }, () => crypto.randomUUID()).join(" ") })) }) }));
+  c.copyLink(); await Bun.sleep(5);
+  expect(c.state.saveStatus).toMatch(/^Link copied \(\d+ characters/);
 });
 
 test("inputs on panels (task drawer, style, open dialog) match the panel: light on light, dark on dark", () => {

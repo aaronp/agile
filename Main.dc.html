@@ -233,6 +233,13 @@ body{margin:0}
 .kb-menu-item{display:flex;align-items:baseline;justify-content:space-between;gap:16px;padding:8px 10px;border:0;border-radius:var(--radius);background:transparent;cursor:pointer;text-align:left}
 .kb-menu-item:hover,.kb-menu-item:focus-visible{background:var(--control)}
 a.kb-menu-item{color:inherit;text-decoration:none}
+.kb-menu-badge{justify-content:center}
+.kb-menu-badge img,.kb-badge-preview img{display:block;max-width:100%}
+.kb-badge-preview{display:flex;justify-content:center;padding:12px;border:1px dashed var(--line);border-radius:var(--radius)}
+.kb-badge-row{display:grid;grid-template-columns:minmax(0,1fr) 80px 64px 40px;gap:8px;align-items:center}
+.kb-badge-row select{height:36px;border:1px solid var(--line);border-radius:var(--radius);background:var(--control);font-size:16px}
+.kb-badge-row input[type=color]{width:40px;height:36px;padding:2px;border:1px solid var(--line);border-radius:var(--radius);background:var(--control)}
+.kb-badge-col{display:flex;align-items:center;gap:8px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .kb-menu-sep{border:0;border-top:1px solid var(--line);margin:6px 4px;width:auto}
 .kb-menu-item small{color:var(--panel-muted);font-size:11px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .kb-src{font-family:var(--mono);font-size:11px;padding:3px 8px;border:1px dashed var(--line);border-radius:var(--radius);color:var(--muted);white-space:nowrap;cursor:help}
@@ -292,6 +299,8 @@ a.kb-menu-item{color:inherit;text-decoration:none}
         <sc-if value="{{menuOpen}}" hint-placeholder-val="{{ false }}">
           <div class="kb-menu-back" onClick="{{closeMenu}}"></div>
           <div class="kb-menu" role="menu">
+            <button class="kb-menu-item kb-menu-badge" role="menuitem" title="Badge: settings, download or copy" onClick="{{openBadge}}"><img src="{{badgeSrc}}" alt="{{badgeAlt}}"></button>
+            <hr class="kb-menu-sep">
             <sc-for list="{{menuItems}}" as="mi" hint-placeholder-count="5">
               <button class="kb-menu-item" role="menuitem" onClick="{{mi.pick}}"><span>{{mi.label}}</span><small>{{mi.hint}}</small></button>
             </sc-for>
@@ -659,6 +668,33 @@ a.kb-menu-item{color:inherit;text-decoration:none}
     </div>
   </sc-if>
 
+  <sc-if value="{{badgeOpen}}" hint-placeholder-val="{{ false }}">
+    <div class="kb-modal-back" onClick="{{badgeBackdrop}}" onKeyDown="{{badgeKey}}">
+      <div class="kb-modal" role="dialog" aria-modal="true" aria-labelledby="kb-badge-h">
+        <div class="kb-modal-head">
+          <h2 id="kb-badge-h">Badge</h2>
+          <button class="kb-icon" aria-label="Close" onClick="{{hideBadge}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+        </div>
+        <div class="kb-badge-preview"><img src="{{badgeSrc}}" alt="{{badgeAlt}}"></div>
+        <div class="kb-row">
+          <button class="kb-btn kb-btn-primary" onClick="{{downloadBadge}}">Download SVG</button>
+          <button class="kb-btn" onClick="{{copyBadge}}">Copy SVG</button>
+        </div>
+        <span class="kb-flabel">Columns: symbol (up to 6 characters), icon and color</span>
+        <sc-for list="{{badgeRows}}" as="br" hint-placeholder-count="3">
+          <div class="kb-badge-row">
+            <label class="kb-badge-col"><input type="checkbox" checked="{{br.included}}" onChange="{{br.toggle}}"><span>{{br.column}}</span></label>
+            <input class="kb-input" aria-label="{{br.symbolLabel}}" placeholder="Symbol" value="{{br.symbol}}" disabled="{{br.excluded}}" onChange="{{br.onSymbol}}">
+            <select aria-label="{{br.iconLabel}}" value="{{br.icon}}" disabled="{{br.excluded}}" onChange="{{br.onIcon}}"><sc-for list="{{br.icons}}" as="op"><option value="{{op.value}}">{{op.label}}</option></sc-for></select>
+            <input type="color" aria-label="{{br.colorLabel}}" value="{{br.fill}}" disabled="{{br.excluded}}" onChange="{{br.onColor}}">
+          </div>
+          <sc-if value="{{br.error}}" hint-placeholder-val="{{ false }}"><p class="kb-field-error">{{br.error}}</p></sc-if>
+        </sc-for>
+        <button class="kb-link" onClick="{{resetBadge}}">Reset to all columns</button>
+      </div>
+    </div>
+  </sc-if>
+
   <sc-if value="{{opError}}" hint-placeholder-val="{{ false }}">
     <div class="kb-toast" role="alert">
       <span>{{opError}}</span>
@@ -830,7 +866,27 @@ const Settings = T.Object({
       }
     },
   }),
+  badge: T.Custom({
+    doc: 'The badge\'s segments: null shows every column with default symbols and icons; otherwise only the listed columns, in board order. Written as "badge: [[column, symbol, icon, color], …]" (JSON), left out when null. An empty color means the default palette.',
+    example: [{ column: 'Backlog', symbol: 'B', icon: '📋', color: '#3b6fd8' }],
+    validate: (v, path) => {
+      if (v === null) return;
+      if (!Array.isArray(v)) fail(`${path}: expected a list`);
+      v.forEach((item, i) => {
+        const at = `${path}[${i}]`;
+        if (item === null || typeof item !== 'object' || ['column', 'symbol', 'icon', 'color'].some((k) => typeof item[k] !== 'string')) fail(`${at}: expected column, symbol, icon and color text`);
+        for (const k of ['column', 'symbol', 'icon']) if (!SINGLE_LINE.test(item[k])) fail(`${at}.${k}: must be one line`);
+        if (Array.from(item.symbol).length > BADGE_SYMBOL_MAX) fail(`symbol can be at most ${BADGE_SYMBOL_MAX} characters`);
+        if (!/^(#[0-9a-f]{6})?$/i.test(item.color)) fail(`color must be like #3b6fd8, or empty for the default`);
+        if (Array.from(item.icon).length > BADGE_ICON_MAX) fail(`icon can be at most ${BADGE_ICON_MAX} characters`);
+      });
+    },
+  }),
 }, { doc: 'Look and feel that travels with the board file.' });
+const BADGE_SYMBOL_MAX = 6;
+const BADGE_ICON_MAX = 8; // code points: one emoji can be several (skin tones, ZWJ sequences)
+/** Icons offered in the badge settings ('' = none). Any other emoji can still be written in the file. */
+const BADGE_ICONS = ['', '📋', '⏳', '✅', '🚧', '🐛', '🔥', '🚀', '👀', '🧪', '📦', '⭐', '❗', '💡', '📝', '🔍', '🎯', '⚠️', '🔒', '🛠️', '🎉', '❌', '🟢', '🟡', '🔴'];
 
 /** Markdown format version. Bump it when the format changes, and upgrade older versions in parseSettings/parseBoard. */
 const DATA_VERSION = 1;
@@ -841,6 +897,7 @@ function defaultBoardSettings() {
     theme: DEFAULT_THEME,
     themes: Object.fromEntries(THEMES.map((t) => [t.id, defaultSettings(t)])),
     effects: Object.fromEntries(Object.entries(EVENT_EFFECTS).map(([event, spec]) => [event, spec.default])),
+    badge: null,
   };
 }
 
@@ -923,8 +980,16 @@ function parseSettings(lines, first) {
       settings.theme = value;
       return;
     }
+    if (key === 'badge') {
+      let list;
+      try { list = JSON.parse(value); } catch (err) { where('badge must be a list like [["Backlog", "B", "📋", "#3b6fd8"]]'); }
+      if (!Array.isArray(list) || !list.every((x) => Array.isArray(x) && (x.length === 3 || x.length === 4))) where('badge must be a list like [["Backlog", "B", "📋", "#3b6fd8"]]');
+      settings.badge = list.map(([column, symbol, icon, color = '']) => ({ column, symbol, icon, color })); // entries from before colors have three values
+      try { check(Settings.props.badge, settings.badge, 'badge'); } catch (err) { where(err.message); }
+      return;
+    }
     const [scope, name] = key.split('.');
-    if (name === undefined) where(`unknown setting "${key}" (expected version, theme, effects.<event> or <theme>.<setting>)`);
+    if (name === undefined) where(`unknown setting "${key}" (expected version, theme, badge, effects.<event> or <theme>.<setting>)`);
     if (scope === 'effects') {
       if (!(name in EVENT_EFFECTS)) where(`unknown effect event "${name}" (expected ${Object.keys(EVENT_EFFECTS).join(', ')})`);
       if (!effectChoices(name).includes(value)) where(`"${value}" is not an effect for ${name} (expected ${effectChoices(name).join(', ')})`);
@@ -956,6 +1021,7 @@ function serializeSettings(settings) {
     }
   }
   for (const event of Object.keys(EVENT_EFFECTS)) if (settings.effects[event] !== defaults.effects[event]) out.push(`effects.${event}: ${settings.effects[event]}`);
+  if (settings.badge !== null) out.push(`badge: ${JSON.stringify(settings.badge.map((b) => [b.column, b.symbol, b.icon, b.color]))}`);
   return out;
 }
 
@@ -1238,6 +1304,46 @@ function setThemeSetting(board, themeId, key, raw) {
   const value = coerceSetting(def, raw);
   return withSettings(board, { ...board.settings, themes: { ...board.settings.themes, [themeId]: { ...board.settings.themes[themeId], [key]: value } } });
 }
+/* Badge: a pill of "<symbol>: <count> <icon>" segments, one per chosen column. */
+const BADGE_COLORS = ['#3b6fd8', '#b7791f', '#7c4dcc', '#16808c', '#c53030'];
+const BADGE_DONE = '#2f855a'; // the last segment is green: it's usually the done column
+/** One row per column: whether it's in the badge, its symbol, icon and color (stored, or the defaults), and the color it's drawn in (`fill`). */
+function badgeRows(board) {
+  const stored = board.settings.badge;
+  const n = board.columns.length;
+  const rows = board.columns.map((col, i) => {
+    const item = stored?.find((b) => b.column === col.name);
+    const icon = i === n - 1 ? '✅' : i === 0 ? '📋' : '⏳';
+    return { column: col.name, count: col.tasks.length, included: stored === null || item !== undefined, symbol: item?.symbol ?? Array.from(col.name)[0].toUpperCase(), icon: item?.icon ?? icon, color: item?.color ?? '' };
+  });
+  // Unset colors follow the palette by position among the shown segments; the last is green.
+  const shown = rows.filter((r) => r.included);
+  return rows.map((r) => { const k = shown.indexOf(r); return { ...r, fill: r.color !== '' ? r.color : k === shown.length - 1 ? BADGE_DONE : BADGE_COLORS[Math.max(k, 0) % BADGE_COLORS.length] }; });
+}
+function setBadgeRow(board, index, patch) {
+  const rows = badgeRows(board);
+  if (rows[index] === undefined) bug(`no column ${index} for the badge`);
+  const badge = rows.map((r, i) => (i === index ? { ...r, ...patch } : r)).filter((r) => r.included).map(({ column, symbol, icon, color }) => ({ column, symbol, icon, color }));
+  return withSettings(board, { ...board.settings, badge });
+}
+const resetBadge = (board) => withSettings(board, { ...board.settings, badge: null });
+/** Rough Verdana 11px widths, enough to size the segments (emoji are wider; joiners and variation selectors take none). */
+const badgeTextWidth = (s) => Array.from(s).reduce((w, ch) => w + (/[\u200d\ufe0f]/.test(ch) ? 0 : /\p{Extended_Pictographic}/u.test(ch) ? 14 : 7), 0);
+const xmlEscape = (s) => s.replace(/[<>&"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' })[c]);
+function badgeSvg(board) {
+  let segs = badgeRows(board).filter((r) => r.included)
+    .map((r) => ({ text: [r.symbol === '' ? `${r.count}` : `${r.symbol}: ${r.count}`, r.icon].filter((x) => x !== '').join(' '), color: r.fill }));
+  if (segs.length === 0) segs = [{ text: 'no columns', color: '#6b7280' }];
+  let x = 0;
+  const parts = segs.map((sg) => { const w = badgeTextWidth(sg.text) + 16; const p = { ...sg, x, w }; x += w; return p; });
+  const label = xmlEscape(segs.map((sg) => sg.text).join(' | '));
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${x}" height="20" role="img" aria-label="${label}"><title>${label}</title>`
+    + `<clipPath id="kb-badge-r"><rect width="${x}" height="20" rx="10"/></clipPath><g clip-path="url(#kb-badge-r)">`
+    + parts.map((p) => `<rect x="${p.x}" width="${p.w}" height="20" fill="${p.color}"/>`).join('')
+    + '</g><g fill="#fff" font-family="Verdana,DejaVu Sans,sans-serif" font-size="11" text-anchor="middle">'
+    + parts.map((p) => `<text x="${p.x + p.w / 2}" y="14">${xmlEscape(p.text)}</text>`).join('')
+    + '</g></svg>';
+}
 function resetThemeSettings(board, themeId) {
   return withSettings(board, { ...board.settings, themes: { ...board.settings.themes, [themeId]: defaultSettings(themeById(themeId)) } });
 }
@@ -1251,8 +1357,9 @@ function addColumn(board, name) {
   return { board: withColumns(board, [...board.columns, { id, name, tasks: [] }]), id };
 }
 function renameColumn(board, colId, name) {
-  findColumn(board, colId);
-  return withColumns(board, board.columns.map((c) => (c.id === colId ? { ...c, name } : c)));
+  const old = findColumn(board, colId).name;
+  const badge = board.settings.badge?.map((b) => (b.column === old ? { ...b, column: name } : b)) ?? null; // the badge follows the rename
+  return withColumns(badge === board.settings.badge ? board : { ...board, settings: { ...board.settings, badge } }, board.columns.map((c) => (c.id === colId ? { ...c, name } : c)));
 }
 function moveColumn(board, colId, beforeColId) {
   if (beforeColId === colId) bug('a column cannot be placed before itself');
@@ -2748,6 +2855,20 @@ const STORAGE_DRAWER_WIDTH = 'kb-drawer-width:v1';
 const DRAWER_MIN_WIDTH = 320;
 const MAX_RECENTS = 8;
 const MAX_UNDO = 100;
+/** A shared link carries the board in the hash (#board=…), so it never reaches the server and isn't bound by its URL limits. */
+const SHARE_PREFIX = '#board=';
+const SHARE_WARN_LENGTH = 2000;
+/** Markdown → deflate-raw → base64url, and back. */
+async function encodeShare(md) {
+  const bytes = new Uint8Array(await new Response(new Blob([md]).stream().pipeThrough(new CompressionStream('deflate-raw'))).arrayBuffer());
+  let bin = '';
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+async function decodeShare(s) {
+  const bytes = Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0));
+  return new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).text();
+}
 
 /* ---------- (6) Component: the IO edge ---------- */
 
@@ -2760,12 +2881,13 @@ class Component extends DCLogic {
     // The address bar is the source of the file (?src=) and the selections; see fromQuery.
     const p = Component.fromQuery(location.search);
     this.src = p.src;
+    this.shared = location.hash.startsWith(SHARE_PREFIX) ? location.hash.slice(SHARE_PREFIX.length) : null; // a board from a shared link, until another is opened
     this.fileHandle = null;
     this.lastEditKey = null; // the field last typed into: further typing there extends the same undo step
     this.pageKey = `${p.mode}|${p.task}`;
     this.state = {
       board: loaded.board,
-      saveStatus: p.src === null ? loaded.saveStatus : `Loading ${p.src}…`,
+      saveStatus: this.shared !== null ? 'Loading shared board…' : p.src === null ? loaded.saveStatus : `Loading ${p.src}…`,
       storageWarning: loaded.storageWarning,
       fresh: null,
       restoreTargets: {},
@@ -2790,6 +2912,7 @@ class Component extends DCLogic {
       copyLabel: 'Copy',
       themeOverride: p.theme,
       menuOpen: false,
+      badgeOpen: false,
       completeDialogFor: null,
       drawerWidth: Component.loadDrawerWidth(),
       collapsed: [], // ids of tasks whose children are folded away (this session only)
@@ -2945,9 +3068,14 @@ class Component extends DCLogic {
       e.preventDefault();
       if (key === 'y' || e.shiftKey) this.redo(); else this.undo();
     };
+    this.onHash = () => { if (location.hash.startsWith(SHARE_PREFIX)) window.location.reload(); }; // another shared link pasted into this tab
     window.addEventListener('popstate', this.onPop);
+    window.addEventListener('hashchange', this.onHash);
     window.addEventListener('keydown', this.onKey);
-    if (this.src !== null) {
+    if (this.shared !== null) {
+      decodeShare(this.shared).then((md) => { const board = parseBoard(md); this.setState({ board, saveStatus: this.persistBoard(board), now: Date.now() }); })
+        .catch((err) => { this.shared = null; this.setState({ opError: `Can't open the shared link: ${err.message}`, saveStatus: this.persistBoard(this.state.board) }); });
+    } else if (this.src !== null) {
       const src = this.src;
       this.openUrl(src).catch((err) => {
         this.src = null;
@@ -2957,16 +3085,30 @@ class Component extends DCLogic {
   }
   /** Keep the address bar in step: a new view or task is a history entry, anything else replaces it. */
   componentDidUpdate() {
+    this.syncSharedHash();
     const next = Component.toQuery(this.state, this.src, location.search);
     const key = `${this.state.mode}|${this.state.editingTaskId}`;
     const isNewPage = key !== this.pageKey;
     this.pageKey = key;
-    if (next === location.search) return;
-    const url = location.pathname + next + location.hash;
+    const hash = this.shared === null && location.hash.startsWith(SHARE_PREFIX) ? '' : location.hash; // drop the shared board once another is opened
+    if (next === location.search && hash === location.hash) return;
+    const url = location.pathname + next + hash;
     if (isNewPage) history.pushState(null, '', url); else history.replaceState(null, '', url);
+  }
+  /** While a shared board is shown, #board= follows its edits, so the address bar (and a reload) has the current board. */
+  syncSharedHash() {
+    const board = this.state.board;
+    if (this.shared === null || board === this.hashedBoard) return;
+    this.hashedBoard = board;
+    encodeShare(serializeBoard(board)).then((enc) => {
+      if (this.shared === null || this.state.board !== board) return; // another board, or a newer edit, took over
+      this.shared = enc;
+      history.replaceState(null, '', location.pathname + location.search + SHARE_PREFIX + enc);
+    }, (err) => this.setState({ opError: `Couldn't update the link in the address bar: ${err.message}` }));
   }
   componentWillUnmount() {
     window.removeEventListener('popstate', this.onPop);
+    window.removeEventListener('hashchange', this.onHash);
     window.removeEventListener('keydown', this.onKey);
     this.alive = false;
     window.cancelAnimationFrame(this.raf);
@@ -3106,6 +3248,7 @@ class Component extends DCLogic {
   /* ---- commits ---- */
   nowIso() { return new Date().toISOString(); }
   persistBoard(board) {
+    if (this.shared !== null) return 'Not saved in this browser: opened from a shared link. Save or Download to keep changes.';
     if (this.src !== null) return `Not saved in this browser: opened from ${this.src}. Save or Download to keep changes.`;
     try {
       window.localStorage.setItem(STORAGE_BOARD, serializeBoard(board));
@@ -3192,6 +3335,7 @@ class Component extends DCLogic {
   adopt(text, recent, src) {
     const board = parseBoard(text);
     this.src = src;
+    this.shared = null;
     this.fileHandle = null;
     const same = (r) => (recent.url !== undefined ? r.url === recent.url : r.url === undefined && r.name === recent.name);
     const recents = [recent, ...this.state.recents.filter((r) => !same(r))].slice(0, MAX_RECENTS);
@@ -3206,21 +3350,52 @@ class Component extends DCLogic {
     if (!ok) return;
     const board = validateBoard({ ...parseBoard(BLANK_MD), settings: this.state.board.settings });
     this.src = null;
+    this.shared = null;
     this.fileHandle = null;
     this.lastEditKey = null;
     this.setState({ board, past: [], future: [], saveStatus: this.persistBoard(board), sourceDraft: null, parseError: null, drag: null, editingTaskId: null, now: Date.now() });
   }
   fileName() { return (this.state.board.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'board') + '.md'; }
-  download() {
-    const name = this.fileName();
+  download() { return this.downloadText(this.fileName(), serializeBoard(this.state.board), 'text/markdown;charset=utf-8'); }
+  downloadBadge() { return this.downloadText(this.fileName().replace(/\.md$/, '-badge.svg'), badgeSvg(this.state.board), 'image/svg+xml'); }
+  copyBadge() {
+    const done = (msg) => this.setState({ saveStatus: msg });
+    if (navigator.clipboard === undefined) { done('Clipboard blocked: download the badge instead'); return; }
+    navigator.clipboard.writeText(badgeSvg(this.state.board)).then(() => done('Badge SVG copied'), () => done('Clipboard blocked: download the badge instead'));
+  }
+  downloadText(name, text, type) {
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([serializeBoard(this.state.board)], { type: 'text/markdown;charset=utf-8' }));
+    a.href = URL.createObjectURL(new Blob([text], { type }));
     a.download = name;
     document.body.appendChild(a);
     a.click();
     a.remove();
     window.setTimeout(() => URL.revokeObjectURL(a.href), 0);
     return name;
+  }
+  /** A link with the whole board compressed into it (plus the current view and filters); copied, or shown to copy if the clipboard is blocked. */
+  async shareLink() {
+    const u = new URL(location.href);
+    u.search = Component.toQuery(this.state, null, location.search);
+    u.hash = SHARE_PREFIX + await encodeShare(serializeBoard(this.state.board));
+    return u.href;
+  }
+  /**
+   * Safari only lets a click write to the clipboard straight away, and the link is made asynchronously, so the
+   * clipboard is handed a ClipboardItem holding the pending link. Without one, writeText; if both fail, a prompt shows it.
+   */
+  copyLink() {
+    const link = this.shareLink();
+    // ponytail: fixed threshold; some chat apps and older browsers cut links past ~2000 characters
+    const report = (l, how) => this.setState({ saveStatus: `Link ${how}${l.length > SHARE_WARN_LENGTH ? ` (${l.length} characters: some apps cut long links, so share the .md if it breaks)` : ''}` });
+    const failed = (err) => this.setState({ opError: `Couldn't make a link: ${err.message}` });
+    const shown = () => link.then((l) => { window.prompt('Copy this link to share the board:', l); report(l, 'shown'); }, failed);
+    const clip = navigator.clipboard;
+    const write = clip === undefined ? Promise.reject(new Error('no clipboard'))
+      : typeof ClipboardItem === 'function' && typeof clip.write === 'function'
+        ? clip.write([new ClipboardItem({ 'text/plain': link.then((l) => new Blob([l], { type: 'text/plain' })) })])
+        : link.then((l) => clip.writeText(l));
+    write.then(() => link.then((l) => report(l, 'copied')), shown);
   }
   /** Writes the board to a file picked once, then the same file on each save (Chrome, Edge). Elsewhere, downloads it. */
   async save() {
@@ -3779,11 +3954,38 @@ class Component extends DCLogic {
       toggleMenu: () => this.setState({ menuOpen: !s.menuOpen }),
       closeMenu: () => this.setState({ menuOpen: false }),
       menuKey: (e) => { if (e.key === 'Escape') this.setState({ menuOpen: false }); },
+      badgeSrc: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(badgeSvg(board))}`,
+      badgeAlt: badgeRows(board).filter((r) => r.included).map((r) => `${r.symbol}: ${r.count} ${r.icon}`).join(' | '),
+      openBadge: () => this.setState({ menuOpen: false, badgeOpen: true, pickerOpen: false }),
+      badgeOpen: s.badgeOpen,
+      hideBadge: () => this.setState({ badgeOpen: false }),
+      badgeBackdrop: (e) => { if (e.target === e.currentTarget) this.setState({ badgeOpen: false }); },
+      badgeKey: (e) => { if (e.key === 'Escape') this.setState({ badgeOpen: false }); },
+      downloadBadge: () => this.downloadBadge(),
+      copyBadge: () => this.copyBadge(),
+      resetBadge: () => this.commit(resetBadge, { drafts: {}, fieldErrors: {} }),
+      badgeRows: badgeRows(board).map((r, i) => {
+        const key = (f) => `badge.${i}.${f}`;
+        const draft = (f) => (key(f) in s.drafts ? s.drafts[key(f)] : r[f]);
+        const edit = (f) => (e) => { const v = e.target.value; this.editField(key(f), v, (b) => setBadgeRow(b, i, { [f]: v })); };
+        return {
+          column: r.column, included: r.included, excluded: !r.included,
+          symbol: draft('symbol'), icon: r.icon, fill: r.fill,
+          icons: (BADGE_ICONS.includes(r.icon) ? BADGE_ICONS : [...BADGE_ICONS, r.icon]).map((v) => ({ value: v, label: v === '' ? 'None' : v })),
+          symbolLabel: `Symbol for ${r.column}`, iconLabel: `Icon for ${r.column}`, colorLabel: `Color for ${r.column}`,
+          error: s.fieldErrors[key('symbol')] ?? false,
+          toggle: () => this.commit((b) => setBadgeRow(b, i, { included: !r.included })),
+          onSymbol: edit('symbol'),
+          onIcon: (e) => { const v = e.target.value; this.commit((b) => setBadgeRow(b, i, { icon: v })); },
+          onColor: edit('color'), // dragging the picker fires repeatedly: one undo step
+        };
+      }),
       menuItems: [
         { label: 'New', hint: 'Blank board', run: () => this.newBoard() },
         { label: 'Open…', hint: 'File, URL or recent', run: () => this.setState({ openOpen: true, openError: null, pickerOpen: false }) },
         { label: 'Save', hint: 'Ctrl/⌘ S', run: () => this.save() },
         { label: 'Download', hint: this.fileName(), run: () => this.download() },
+        { label: 'Copy link', hint: 'Board in the URL', run: () => this.copyLink() },
         { label: 'Style', hint: theme.name, run: () => this.setState({ pickerOpen: true }) },
       ].map((m) => ({ label: m.label, hint: m.hint, pick: () => { this.setState({ menuOpen: false }); m.run(); } })),
       fromSrc: this.src !== null,
