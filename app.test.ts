@@ -29,6 +29,10 @@ function load(search = "", store: Store = {}, fetch?: (u: string, init?: any) =>
   const make = () => { const c = new mod.Component({ startTheme: "minimal" }); c.componentDidMount(); return c; };
   return { ...mod, make, store, g };
 }
+/** Waits for async work (fetch, deflate) to land: polls until `done()` holds, rather than sleeping a fixed time that a busy machine can overrun. */
+async function until(done: () => boolean, what: string) {
+  for (const end = Date.now() + 2000; !done(); await Bun.sleep(1)) if (Date.now() > end) throw new Error(`timed out waiting for ${what}`);
+}
 const { Component: C, parseBoard, serializeBoard, deleteTask, moveTask, SEED_MD } = load();
 const KEYS = C.KEYS;
 const other = SEED_MD.replace("# Sprint 14", "# Elsewhere");
@@ -156,16 +160,16 @@ test("the menu holds New, Open, Save, Download, Copy link and Style; New starts 
 
 test("Copy link puts the board in the hash; opening that link shows it without overwriting the saved board", async () => {
   const { make, g } = load("?src=b.md&view=split", {}, () => new Response(other));
-  const a = make(); await Bun.sleep(5);
+  const a = make(); await until(() => a.state.board.title === "Elsewhere", "?src to load");
   let copied = "";
   g.navigator.clipboard = { writeText: async (t: string) => { copied = t; } };
-  a.renderVals().menuItems.find((m: any) => m.label === "Copy link").pick(); await Bun.sleep(5);
+  a.renderVals().menuItems.find((m: any) => m.label === "Copy link").pick(); await until(() => a.state.saveStatus.startsWith("Link"), "the copy");
   expect(a.state.saveStatus).toBe("Link copied");
   const u = new URL(copied);
   expect([u.search, u.hash.startsWith("#board=")]).toEqual(["?view=split", true]);
   const store: Store = { [KEYS.board]: SEED_MD };
   const b = load(u.search, store); b.g.location.hash = u.hash;
-  const c = b.make(); await Bun.sleep(5);
+  const c = b.make(); await until(() => c.state.board.title !== parseBoard(SEED_MD).title, "the shared board to decode");
   expect(c.state.board.title).toBe("Elsewhere");
   expect(c.persistBoard(c.state.board)).toContain("shared link");
   expect(store[KEYS.board]).toBe(serializeBoard(parseBoard(SEED_MD)));
@@ -204,13 +208,14 @@ test("Copy link hands Safari a pending ClipboardItem; a shared board's edits fol
   const a = make();
   let copied = "";
   g.navigator.clipboard = { write: async ([item]: any) => { copied = await (await item.items["text/plain"]).text(); } };
-  a.copyLink(); await Bun.sleep(5);
+  a.copyLink(); await until(() => a.state.saveStatus.startsWith("Link"), "the copy");
   expect([a.state.saveStatus, copied.includes("#board=")]).toEqual(["Link copied", true]);
   const b = load(""); b.g.location.hash = new URL(copied).hash;
-  const c = b.make(); await Bun.sleep(5);
-  c.commit((x: any) => ({ ...x, title: "Edited" })); await Bun.sleep(5);
+  const c = b.make(); await until(() => c.state.saveStatus !== "Loading shared board…", "the shared board to decode");
+  const shared = b.g.location.hash;
+  c.commit((x: any) => ({ ...x, title: "Edited" })); await until(() => b.g.location.hash !== shared, "the hash to follow the edit");
   const d = load(""); d.g.location.hash = b.g.location.hash;               // the address bar now opens the edited board
-  const e = d.make(); await Bun.sleep(5);
+  const e = d.make(); await until(() => e.state.board.title === "Edited", "the edited board to decode");
   expect(e.state.board.title).toBe("Edited");
 });
 
@@ -218,10 +223,10 @@ test("Copy link warns when the link is long", async () => {
   const { make, g } = load();
   const c = make();
   g.navigator.clipboard = { writeText: async () => {} };
-  c.copyLink(); await Bun.sleep(5);
+  c.copyLink(); await until(() => c.state.saveStatus.startsWith("Link"), "the copy");
   expect(c.state.saveStatus).toBe("Link copied");
   c.commit((b: any) => ({ ...b, columns: b.columns.map((col: any, i: number) => i ? col : { ...col, tasks: col.tasks.map((t: any) => ({ ...t, description: Array.from({ length: 40 }, () => crypto.randomUUID()).join(" ") })) }) }));
-  c.copyLink(); await Bun.sleep(5);
+  c.copyLink(); await until(() => /^Link copied \(/.test(c.state.saveStatus), "the long-link warning");
   expect(c.state.saveStatus).toMatch(/^Link copied \(\d+ characters/);
 });
 
