@@ -38,6 +38,10 @@ body{margin:0}
 .kb-seg-btn{height:34px;padding:0 12px;border:0;background:transparent;cursor:pointer}
 .kb-seg-btn+.kb-seg-btn{border-left:1px solid var(--line)}
 .kb-seg-btn[aria-pressed="true"]{background:var(--accent);color:var(--accent-fg)}
+.kb-time{display:flex;align-items:center;gap:12px;padding-top:4px}
+.kb-time-range{flex:1 1 auto;min-width:120px;accent-color:var(--accent,currentColor)}
+.kb-time-label{flex:0 1 50%;font-family:var(--mono);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kb-past .kb-board{outline:2px dashed var(--line);outline-offset:-2px}
 .kb-filters{display:flex;flex-wrap:wrap;align-items:flex-start;gap:16px 28px;padding-top:4px}
 .kb-fgroup{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .kb-flabel{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
@@ -216,6 +220,7 @@ body{margin:0}
 .kb-danger{align-self:flex-start;height:34px;padding:0 12px;border:1px solid var(--danger-fg);border-radius:var(--radius);background:transparent;color:var(--danger-fg);cursor:pointer}
 .kb-danger:hover{background:var(--danger-bg)}
 .kb-toast{position:absolute;z-index:50;left:50%;bottom:20px;transform:translateX(-50%);max-width:min(560px,calc(100% - 32px));display:flex;gap:12px;align-items:center;padding:10px 14px;border-radius:var(--radius);background:var(--danger-bg);color:var(--danger-fg);box-shadow:0 10px 30px rgba(0,0,0,.2);font-size:13px}
+.kb-toast-info{background:var(--panel);color:inherit;border:1px solid var(--line);pointer-events:none}
 .kb[data-theme="terminal"] .kb-card,.kb[data-theme="terminal"] .kb-col{border-style:solid}
 .kb[data-theme="terminal"] .kb-card-title::before{content:"> ";opacity:.6}
 .kb[data-theme="terminal"] .kb-pill{border-color:currentColor;border-radius:0}
@@ -239,6 +244,15 @@ a.kb-menu-item{color:inherit;text-decoration:none}
 .kb-badge-row{display:grid;grid-template-columns:minmax(0,1fr) 80px 64px 40px;gap:8px;align-items:center}
 .kb-badge-row select{height:36px;border:1px solid var(--line);border-radius:var(--radius);background:var(--control);font-size:16px}
 .kb-badge-row input[type=color]{width:40px;height:36px;padding:2px;border:1px solid var(--line);border-radius:var(--radius);background:var(--control)}
+.kb-cardp{display:flex;flex-direction:column;gap:10px;padding:14px 16px;border:1px solid #e3e3e8;border-radius:12px;background:#fff;color:#16181d;font-family:system-ui,sans-serif;font-size:13px}
+.kb-cardp-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.kb-cardp-head small{display:block;color:#6b7280}
+.kb-card-pill{padding:2px 8px;border-radius:999px;font-size:11px;background:#eef0f4}
+.kb-tone-good{background:#dcf2e6;color:#1d6b44}.kb-tone-warn{background:#fdf0d5;color:#8a5a00}.kb-tone-bad{background:#fbe0e3;color:#9b1c2e}
+.kb-cardp-big b{font-size:28px}
+.kb-cardp-bar{display:flex;gap:2px;height:8px}.kb-cardp-bar span{border-radius:4px;min-width:2px}
+.kb-cardp-legend{display:flex;flex-wrap:wrap;gap:4px 12px;color:#4b5563}.kb-cardp-legend i{display:inline-block;width:8px;height:8px;margin-right:5px;border-radius:2px}
+.kb-cardp-foot{display:flex;justify-content:space-between;gap:8px;padding-top:8px;border-top:1px solid #e3e3e8}.kb-cardp-foot code{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .kb-badge-col{display:flex;align-items:center;gap:8px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .kb-menu-sep{border:0;border-top:1px solid var(--line);margin:6px 4px;width:auto}
 .kb-menu-item small{color:var(--panel-muted);font-size:11px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -293,6 +307,7 @@ a.kb-menu-item{color:inherit;text-decoration:none}
       <div class="kb-seg" role="group" aria-label="History">
         <button class="kb-seg-btn kb-undo" aria-label="Undo" title="Undo (Ctrl/⌘ Z)" disabled="{{undoDisabled}}" onClick="{{undo}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"></path><path d="M4 9h11a5 5 0 0 1 0 10h-3"></path></svg></button>
         <button class="kb-seg-btn kb-undo" aria-label="Redo" title="Redo (Ctrl/⌘ Shift Z)" disabled="{{redoDisabled}}" onClick="{{redo}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 14 5-5-5-5"></path><path d="M20 9H9a5 5 0 0 0 0 10h3"></path></svg></button>
+        <button class="kb-seg-btn kb-undo" aria-label="Time slider" title="History: see the board at an earlier time" aria-pressed="{{timeOpen}}" onClick="{{toggleTime}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg></button>
       </div>
       <div class="kb-menu-wrap" onKeyDown="{{menuKey}}">
         <button class="kb-btn kb-menu-btn" aria-label="Menu" aria-haspopup="menu" aria-expanded="{{menuOpen}}" onClick="{{toggleMenu}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"></path></svg></button>
@@ -310,6 +325,13 @@ a.kb-menu-item{color:inherit;text-decoration:none}
         </sc-if>
       </div>
     </div>
+    <sc-if value="{{time}}" hint-placeholder-val="{{ false }}">
+      <div class="kb-time">
+        <input type="range" class="kb-time-range" min="0" max="{{time.max}}" step="1" value="{{time.value}}" aria-label="Time" aria-valuetext="{{time.label}}" onChange="{{time.onChange}}">
+        <span class="kb-time-label">{{time.label}}</span>
+        <button class="kb-btn" disabled="{{time.atNow}}" onClick="{{time.now}}">Now</button>
+      </div>
+    </sc-if>
     <sc-if value="{{filterOpen}}" hint-placeholder-val="{{ false }}">
       <div class="kb-filters">
         <div class="kb-fgroup">
@@ -672,13 +694,26 @@ a.kb-menu-item{color:inherit;text-decoration:none}
     <div class="kb-modal-back" onClick="{{badgeBackdrop}}" onKeyDown="{{badgeKey}}">
       <div class="kb-modal" role="dialog" aria-modal="true" aria-labelledby="kb-badge-h">
         <div class="kb-modal-head">
-          <h2 id="kb-badge-h">Badge</h2>
+          <h2 id="kb-badge-h">Badge and card</h2>
           <button class="kb-icon" aria-label="Close" onClick="{{hideBadge}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
         </div>
         <div class="kb-badge-preview"><img src="{{badgeSrc}}" alt="{{badgeAlt}}"></div>
         <div class="kb-row">
           <button class="kb-btn kb-btn-primary" onClick="{{downloadBadge}}">Download SVG</button>
           <button class="kb-btn" onClick="{{copyBadge}}">Copy SVG</button>
+        </div>
+        <sc-if value="{{cardPreview}}" hint-placeholder-val="{{ false }}">
+          <div class="kb-cardp" aria-label="card.json preview">
+            <div class="kb-cardp-head"><div><b>{{cardPreview.title}}</b><small>{{cardPreview.subtitle}}</small></div><span class="{{cardPreview.tone}}">{{cardPreview.pill}}</span></div>
+            <div class="kb-cardp-big"><b>{{cardPreview.big}}</b> {{cardPreview.bigLabel}}</div>
+            <div class="kb-cardp-bar"><sc-for list="{{cardPreview.items}}" as="ci"><span style="{{ci.seg}}"></span></sc-for></div>
+            <div class="kb-cardp-legend"><sc-for list="{{cardPreview.items}}" as="ci"><span><i style="{{ci.dot}}"></i>{{ci.label}} {{ci.n}}</span></sc-for></div>
+            <div class="kb-cardp-foot"><code>{{cardPreview.srcLabel}}</code><sc-if value="{{cardPreview.open}}" hint-placeholder-val="{{ false }}"><a href="{{cardPreview.open}}" target="_blank" rel="noopener">Open →</a></sc-if></div>
+          </div>
+        </sc-if>
+        <div class="kb-row">
+          <button class="kb-btn" onClick="{{downloadCard}}">Download card.json</button>
+          <button class="kb-btn" onClick="{{copyCard}}">Copy card.json</button>
         </div>
         <span class="kb-flabel">Columns: symbol (up to 6 characters), icon and color</span>
         <sc-for list="{{badgeRows}}" as="br" hint-placeholder-count="3">
@@ -695,6 +730,9 @@ a.kb-menu-item{color:inherit;text-decoration:none}
     </div>
   </sc-if>
 
+  <sc-if value="{{toast}}" hint-placeholder-val="{{ false }}">
+    <div class="kb-toast kb-toast-info" role="status">{{toast}}</div>
+  </sc-if>
   <sc-if value="{{opError}}" hint-placeholder-val="{{ false }}">
     <div class="kb-toast" role="alert">
       <span>{{opError}}</span>
@@ -1344,6 +1382,30 @@ function badgeSvg(board) {
     + parts.map((p) => `<text x="${p.x + p.w / 2}" y="14">${xmlEscape(p.text)}</text>`).join('')
     + '</g></svg>';
 }
+/** The hosted app that card links open; the CLI takes AGILE_HOST from the environment to point elsewhere. */
+const AGILE_HOST = 'https://aaronp.github.io/agile/';
+/** The app at `host` showing the board at `src` (a URL, or a path relative to host). */
+const boardLink = (host, src) => `${host}?src=${encodeURIComponent(src).replace(/%2F/gi, '/').replace(/%3A/gi, ':')}`;
+/**
+ * The board as a dashboard card (card.json, the same tool-neutral format as Decision Ledger's): title, a status pill,
+ * one big number and a legend with a count per item. The legend is the badge's columns, in its colors; the last column counts as done.
+ */
+function boardCard(board, today, source) {
+  const rows = badgeRows(board).filter((r) => r.included);
+  const total = board.columns.reduce((n, c) => n + c.tasks.length, 0);
+  const done = board.columns[board.columns.length - 1]?.tasks.length ?? 0;
+  return {
+    version: 1,
+    title: board.title,
+    subtitle: 'Kanban board',
+    status: total === done ? { label: 'All done', tone: 'good' } : { label: `${total - done} open`, tone: 'neutral' },
+    heading: { primary: `${done}/${total}`, label: 'tasks done' },
+    legend: rows.map((r) => ({ id: r.column, label: r.column, color: r.fill })),
+    report: Object.fromEntries(rows.map((r) => [r.column, r.count])),
+    source,
+    updated: today,
+  };
+}
 function resetThemeSettings(board, themeId) {
   return withSettings(board, { ...board.settings, themes: { ...board.settings.themes, [themeId]: defaultSettings(themeById(themeId)) } });
 }
@@ -1411,6 +1473,32 @@ const STAMP_FORMAT = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: '
 const formatStamp = (iso) => `${STAMP_FORMAT.format(new Date(iso))} UTC`;
 
 /** `nowMs` is passed in (the UI ticks it), so the open-ended last stay is measured without reading the clock here. */
+/**
+ * The board as its history says it stood at `at` (ISO): each task in the column it last entered by then, with the owner logged
+ * there; tasks logged into "Archive" by then are in the archive. Tasks added later are left out, and so are deleted ones (the file
+ * doesn't keep them). Titles, tags and descriptions are today's. Columns since renamed or removed come back, after today's.
+ */
+function boardAt(board, at) {
+  const t = Date.parse(at);
+  const columns = board.columns.map((c) => ({ ...c, tasks: [] }));
+  const archive = [];
+  for (const task of allTasks(board)) {
+    const past = task.history.filter((h) => Date.parse(h.at) <= t);
+    if (past.length === 0) continue;
+    const last = past[past.length - 1];
+    const then = { ...task, owner: last.owner, history: past };
+    if (last.column === 'Archive') { archive.push(then); continue; }
+    let col = columns.find((c) => c.name === last.column);
+    if (col === undefined) { col = { id: `c${columns.length + 1}`, name: last.column, tasks: [] }; columns.push(col); }
+    col.tasks.push(then);
+  }
+  const ids = new Set([...columns.flatMap((c) => c.tasks), ...archive].map((x) => x.id));
+  const orphan = (x) => (x.parent === '' || ids.has(x.parent) ? x : { ...x, parent: '' }); // a parent added later
+  return { ...board, columns: columns.map((c) => ({ ...c, tasks: c.tasks.map(orphan) })), archive: archive.map(orphan) };
+}
+/** Every history entry on the board, oldest first: the time slider's steps. */
+const historyEvents = (board) => allTasks(board).flatMap((task) => task.history.map((h) => ({ ...h, title: task.title })))
+  .sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
 function historyView(task, nowMs) {
   return task.history.map((h, i) => {
     const next = task.history[i + 1];
@@ -2857,6 +2945,7 @@ const MAX_RECENTS = 8;
 const MAX_UNDO = 100;
 /** A shared link carries the board in the hash (#board=…), so it never reaches the server and isn't bound by its URL limits. */
 const SHARE_PREFIX = '#board=';
+const TOAST_MS = 2500;
 const SHARE_WARN_LENGTH = 2000;
 /** Markdown → deflate-raw → base64url, and back. */
 async function encodeShare(md) {
@@ -2883,6 +2972,7 @@ class Component extends DCLogic {
     this.src = p.src;
     this.shared = location.hash.startsWith(SHARE_PREFIX) ? location.hash.slice(SHARE_PREFIX.length) : null; // a board from a shared link, until another is opened
     this.fileHandle = null;
+    this.writable = null; // the ?src URL when the server that sent it takes it back (x-agile-writable: the agile CLI or make dev)
     this.lastEditKey = null; // the field last typed into: further typing there extends the same undo step
     this.pageKey = `${p.mode}|${p.task}`;
     this.state = {
@@ -2905,9 +2995,12 @@ class Component extends DCLogic {
       tagInput: '',
       descTab: 'preview',
       historyOpen: false,
+      timeOpen: false, // the time slider
+      timeAt: null, // the ISO time the board is shown at; null = now (editable)
       now: Date.now(),
       drag: null,
       opError: null,
+      toast: null, // a short-lived note after a file action (see notify)
       effectError: null,
       copyLabel: 'Copy',
       themeOverride: p.theme,
@@ -3111,6 +3204,7 @@ class Component extends DCLogic {
     window.removeEventListener('hashchange', this.onHash);
     window.removeEventListener('keydown', this.onKey);
     this.alive = false;
+    window.clearTimeout(this.toastTimer);
     window.cancelAnimationFrame(this.raf);
     window.clearInterval(this.clock);
     window.removeEventListener('pointermove', this.onWinMove);
@@ -3258,7 +3352,14 @@ class Component extends DCLogic {
     }
   }
   /** Run a pure board transform; on success save and clear the source draft, on failure show the error. Returns true on success. */
+  /** True (and says so) while the board is shown at a past time: the past is read-only. */
+  inPast() {
+    if (this.state.timeAt === null) return false;
+    this.notify('Viewing the past: go back to Now to edit');
+    return true;
+  }
   commit(transform, extraState, after) {
+    if (this.inPast()) return false;
     try {
       const board = transform(this.state.board);
       this.setState({ ...this.undoStep(board, null), board, now: Date.now(), sourceDraft: null, parseError: null, opError: null, saveStatus: this.persistBoard(board), ...(extraState ?? {}) }, after);
@@ -3270,6 +3371,7 @@ class Component extends DCLogic {
   }
   /** Edit a text field with a draft: the input always shows what was typed; the board updates whenever the value is valid. */
   editField(key, raw, transform, after) {
+    if (this.inPast()) return;
     const drafts = { ...this.state.drafts, [key]: raw };
     try {
       const board = transform(this.state.board);
@@ -3292,6 +3394,7 @@ class Component extends DCLogic {
   }
   /** Moves one step back (dir -1) or forward (+1). Field drafts are dropped so inputs show the restored board. */
   travel(dir) {
+    if (this.inPast()) return;
     const s = this.state;
     const from = dir < 0 ? s.past : s.future;
     if (from.length === 0) return;
@@ -3319,6 +3422,7 @@ class Component extends DCLogic {
     const text = await res.text();
     if (/^\s*<(!doctype|html)/i.test(text)) throw new Error('that is a web page, not a markdown file');
     this.adopt(text, { name: url.split('/').pop() || url, url: raw.trim() }, raw.trim());
+    if (res.headers.get('x-agile-writable') !== null) this.writable = url;
   }
   submitOpenUrl() {
     const raw = this.state.openUrl.trim();
@@ -3337,11 +3441,12 @@ class Component extends DCLogic {
     this.src = src;
     this.shared = null;
     this.fileHandle = null;
+    this.writable = null; // the ?src URL when the server that sent it takes it back (x-agile-writable: the agile CLI or make dev)
     const same = (r) => (recent.url !== undefined ? r.url === recent.url : r.url === undefined && r.name === recent.name);
     const recents = [recent, ...this.state.recents.filter((r) => !same(r))].slice(0, MAX_RECENTS);
     try { window.localStorage.setItem(STORAGE_RECENTS, JSON.stringify(recents)); } catch (err) { /* blocked storage: recents last this session only */ }
     this.lastEditKey = null;
-    this.setState({ board, recents, past: [], future: [], saveStatus: this.persistBoard(board), sourceDraft: null, parseError: null, drag: null, now: Date.now(), openOpen: false, openError: null, openDragging: false });
+    this.setState({ board, recents, past: [], future: [], timeAt: null, timeOpen: false, saveStatus: this.persistBoard(board), sourceDraft: null, parseError: null, drag: null, now: Date.now(), openOpen: false, openError: null, openDragging: false });
   }
   newBoard() {
     const ok = window.confirm(this.src === null
@@ -3352,16 +3457,34 @@ class Component extends DCLogic {
     this.src = null;
     this.shared = null;
     this.fileHandle = null;
+    this.writable = null; // the ?src URL when the server that sent it takes it back (x-agile-writable: the agile CLI or make dev)
     this.lastEditKey = null;
-    this.setState({ board, past: [], future: [], saveStatus: this.persistBoard(board), sourceDraft: null, parseError: null, drag: null, editingTaskId: null, now: Date.now() });
+    this.setState({ board, past: [], future: [], timeAt: null, timeOpen: false, saveStatus: this.persistBoard(board), sourceDraft: null, parseError: null, drag: null, editingTaskId: null, now: Date.now() });
   }
   fileName() { return (this.state.board.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'board') + '.md'; }
   download() { return this.downloadText(this.fileName(), serializeBoard(this.state.board), 'text/markdown;charset=utf-8'); }
   downloadBadge() { return this.downloadText(this.fileName().replace(/\.md$/, '-badge.svg'), badgeSvg(this.state.board), 'image/svg+xml'); }
   copyBadge() {
-    const done = (msg) => this.setState({ saveStatus: msg });
+    const done = (msg) => this.notify(msg);
     if (navigator.clipboard === undefined) { done('Clipboard blocked: download the badge instead'); return; }
     navigator.clipboard.writeText(badgeSvg(this.state.board)).then(() => done('Badge SVG copied'), () => done('Clipboard blocked: download the badge instead'));
+  }
+  /** The card as the browser sees it: linked to this page on the ?src board, if there is one. */
+  card() {
+    const source = this.src === null ? { label: this.fileName() } : { label: this.src, url: boardLink(location.href.split(/[?#]/)[0], new URL(this.src, location.href).href) };
+    return boardCard(this.state.board, new Date().toLocaleDateString('en-CA'), source);
+  }
+  downloadCard() { return this.downloadText('card.json', JSON.stringify(this.card(), null, 2) + '\n', 'application/json'); }
+  copyCard() {
+    const done = (msg) => this.notify(msg);
+    if (navigator.clipboard === undefined) { done('Clipboard blocked: download card.json instead'); return; }
+    navigator.clipboard.writeText(JSON.stringify(this.card(), null, 2)).then(() => done('card.json copied'), () => done('Clipboard blocked: download card.json instead'));
+  }
+  /** Shows a file action's result (saved, copied, downloaded) as a toast for a moment; it stays in the status line. */
+  notify(msg) {
+    window.clearTimeout(this.toastTimer);
+    this.toastTimer = window.setTimeout(() => this.setState({ toast: null }), TOAST_MS);
+    this.setState({ saveStatus: msg, toast: msg });
   }
   downloadText(name, text, type) {
     const a = document.createElement('a');
@@ -3387,7 +3510,7 @@ class Component extends DCLogic {
   copyLink() {
     const link = this.shareLink();
     // ponytail: fixed threshold; some chat apps and older browsers cut links past ~2000 characters
-    const report = (l, how) => this.setState({ saveStatus: `Link ${how}${l.length > SHARE_WARN_LENGTH ? ` (${l.length} characters: some apps cut long links, so share the .md if it breaks)` : ''}` });
+    const report = (l, how) => this.notify(`Link ${how}${l.length > SHARE_WARN_LENGTH ? ` (${l.length} characters: some apps cut long links, so share the .md if it breaks)` : ''}`);
     const failed = (err) => this.setState({ opError: `Couldn't make a link: ${err.message}` });
     const shown = () => link.then((l) => { window.prompt('Copy this link to share the board:', l); report(l, 'shown'); }, failed);
     const clip = navigator.clipboard;
@@ -3397,9 +3520,18 @@ class Component extends DCLogic {
         : link.then((l) => clip.writeText(l));
     write.then(() => link.then((l) => report(l, 'copied')), shown);
   }
-  /** Writes the board to a file picked once, then the same file on each save (Chrome, Edge). Elsewhere, downloads it. */
+  /** On the agile CLI or make dev, writes the ?src file back. Otherwise writes the board to a file picked once, then the same file on each save (Chrome, Edge). Elsewhere, downloads it. */
   async save() {
-    if (typeof window.showSaveFilePicker !== 'function') { this.setState({ saveStatus: `Downloaded ${this.download()}` }); return; }
+    if (this.writable !== null) {
+      const url = this.writable;
+      try {
+        const res = await fetch(url, { method: 'PUT', headers: { 'content-type': 'text/markdown; charset=utf-8' }, body: serializeBoard(this.state.board) });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        this.notify(`${url.split('/').pop()} saved`);
+      } catch (err) { this.setState({ opError: `Couldn't save to ${url}: ${err.message}` }); }
+      return;
+    }
+    if (typeof window.showSaveFilePicker !== 'function') { this.notify(`Downloaded ${this.download()}`); return; }
     try {
       if (this.fileHandle === null) {
         this.fileHandle = await window.showSaveFilePicker({ suggestedName: this.fileName(), types: [{ description: 'Markdown', accept: { 'text/markdown': ['.md'] } }] });
@@ -3407,7 +3539,7 @@ class Component extends DCLogic {
       const w = await this.fileHandle.createWritable();
       await w.write(serializeBoard(this.state.board));
       await w.close();
-      this.setState({ saveStatus: `Saved to ${this.fileHandle.name}` });
+      this.notify(`${this.fileHandle.name} saved`);
     } catch (err) {
       if (err.name !== 'AbortError') this.setState({ opError: `Couldn't save: ${err.message}` });
     }
@@ -3541,7 +3673,7 @@ class Component extends DCLogic {
     const s = this.state;
     const theme = this.shownTheme();
     const settings = s.board.settings.themes[theme.id];
-    const board = s.board;
+    const board = s.timeAt === null ? s.board : boardAt(s.board, s.timeAt); // the past is shown read-only
     const filter = { query: s.query, tags: s.tagFilter, owners: s.ownerFilter };
     const drag = s.drag !== null && s.drag.active ? s.drag : null;
 
@@ -3823,7 +3955,7 @@ class Component extends DCLogic {
       themeId: theme.id,
       themeName: theme.name,
       rootStyle: toStyle(bodyVars),
-      rootClass: drag !== null ? 'kb kb-dragging' : 'kb',
+      rootClass: (drag !== null ? 'kb kb-dragging' : 'kb') + (s.timeAt !== null ? ' kb-past' : ''),
       canvasClass: theme.effect === null ? 'kb-fx kb-fx-off' : 'kb-fx',
       mainClass: `kb-main kb-mode-${s.mode}`,
       boardClass: s.parseError !== null ? 'kb-board kb-locked' : 'kb-board',
@@ -3870,6 +4002,7 @@ class Component extends DCLogic {
       hasParseError: s.parseError !== null,
       parseError: s.parseError ?? '',
       onSource: (e) => {
+        if (this.inPast()) return;
         const text = e.target.value;
         try {
           const parsed = parseBoard(text);
@@ -3943,6 +4076,20 @@ class Component extends DCLogic {
 
       opError: s.opError,
       dismissError: () => this.setState({ opError: null }),
+      timeOpen: s.timeOpen,
+      toggleTime: () => this.setState({ timeOpen: !s.timeOpen, timeAt: null }),
+      time: s.timeOpen && (() => {
+        const ev = historyEvents(s.board);
+        const i = s.timeAt === null ? ev.length : ev.findLastIndex((e) => Date.parse(e.at) <= Date.parse(s.timeAt));
+        const e = ev[i];
+        return {
+          max: ev.length, value: i, atNow: s.timeAt === null,
+          label: e === undefined ? 'Now' : `${new Date(e.at).toLocaleString()} · ${e.title} → ${e.column}${e.owner === '' ? '' : ` (${e.owner})`}`,
+          onChange: (x) => { const k = Number(x.target.value); this.setState({ timeAt: k >= ev.length ? null : ev[k].at }); },
+          now: () => this.setState({ timeAt: null }),
+        };
+      })(),
+      toast: s.opError === null && s.toast, // an error toast takes the spot
 
       canUndo: s.past.length > 0,
       canRedo: s.future.length > 0,
@@ -3961,8 +4108,17 @@ class Component extends DCLogic {
       hideBadge: () => this.setState({ badgeOpen: false }),
       badgeBackdrop: (e) => { if (e.target === e.currentTarget) this.setState({ badgeOpen: false }); },
       badgeKey: (e) => { if (e.key === 'Escape') this.setState({ badgeOpen: false }); },
-      downloadBadge: () => this.downloadBadge(),
+      downloadBadge: () => this.notify(`Downloaded ${this.downloadBadge()}`),
       copyBadge: () => this.copyBadge(),
+      downloadCard: () => this.notify(`Downloaded ${this.downloadCard()}`),
+      copyCard: () => this.copyCard(),
+      cardPreview: (() => {
+        if (!s.badgeOpen) return null;
+        const c = this.card();
+        const sum = Object.values(c.report).reduce((a, b) => a + b, 0) || 1;
+        return { title: c.title, subtitle: c.subtitle, pill: c.status.label, big: c.heading.primary, bigLabel: c.heading.label, srcLabel: c.source.label, tone: `kb-card-pill kb-tone-${c.status.tone}`, open: c.source.url ?? false,
+          items: c.legend.map((l) => ({ label: l.label, n: c.report[l.id], dot: `background:${l.color}`, seg: `background:${l.color};flex:${c.report[l.id] / sum} 1 0` })) };
+      })(),
       resetBadge: () => this.commit(resetBadge, { drafts: {}, fieldErrors: {} }),
       badgeRows: badgeRows(board).map((r, i) => {
         const key = (f) => `badge.${i}.${f}`;
@@ -3983,8 +4139,8 @@ class Component extends DCLogic {
       menuItems: [
         { label: 'New', hint: 'Blank board', run: () => this.newBoard() },
         { label: 'Open…', hint: 'File, URL or recent', run: () => this.setState({ openOpen: true, openError: null, pickerOpen: false }) },
-        { label: 'Save', hint: 'Ctrl/⌘ S', run: () => this.save() },
-        { label: 'Download', hint: this.fileName(), run: () => this.download() },
+        { label: 'Save', hint: this.writable !== null ? `Writes ${this.writable.split('/').pop()}` : 'Ctrl/⌘ S', run: () => this.save() },
+        { label: 'Download', hint: this.fileName(), run: () => this.notify(`Downloaded ${this.download()}`) },
         { label: 'Copy link', hint: 'Board in the URL', run: () => this.copyLink() },
         { label: 'Style', hint: theme.name, run: () => this.setState({ pickerOpen: true }) },
       ].map((m) => ({ label: m.label, hint: m.hint, pick: () => { this.setState({ menuOpen: false }); m.run(); } })),

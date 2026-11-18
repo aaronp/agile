@@ -9,14 +9,14 @@ class DCLogic { state: any; props: any; constructor(p: any) { this.props = p ?? 
   setState(u: any, cb?: () => void) { this.state = { ...this.state, ...(typeof u === "function" ? u(this.state) : u) }; (this as any).componentDidUpdate?.(); cb?.(); } }
 
 type Store = Record<string, string>;
-function load(search = "", store: Store = {}, fetch?: (u: string) => Response) {
+function load(search = "", store: Store = {}, fetch?: (u: string, init?: any) => Response) {
   const g: any = {
     location: { search, href: "https://x.test/app/" + search, pathname: "/app/", hash: "" },
     localStorage: { getItem: (k: string) => store[k] ?? null, setItem: (k: string, v: string) => (store[k] = v), removeItem: (k: string) => delete store[k] },
     history: { entries: [] as string[],
       pushState(_s: any, _t: string, u: string) { this.entries.push(u); this.replaceState(_s, _t, u); },
       replaceState(_s: any, _t: string, u: string) { const [p, h] = u.split("#"); g.location.search = p.includes("?") ? "?" + p.split("?")[1] : ""; g.location.hash = h === undefined ? "" : "#" + h; } },
-    fetch: async (u: string) => fetch!(u),
+    fetch: async (u: string, init?: any) => fetch!(u, init),
     document: { querySelector: (sel: string) => g.elements?.[sel.split('=')[0].replace('[', '')] ?? null, getElementById: () => null, createElement: () => ({ click() {}, remove() {} }), body: { appendChild: (a: any) => (g.downloaded = a) } },
     ClipboardItem: class { constructor(public items: Record<string, Promise<Blob>>) {} },
     navigator: {}, confirm: () => g.answer ?? true, setTimeout, clearTimeout, setInterval: () => 0, clearInterval() {},
@@ -25,7 +25,7 @@ function load(search = "", store: Store = {}, fetch?: (u: string) => Response) {
   };
   g.window = g;
   const names = Object.keys(g);
-  const mod = new Function("DCLogic", ...names, js + "\nreturn { Component, parseBoard, serializeBoard, badgeSvg, deleteTask, moveTask, SEED_MD, THEMES, BASE_VARS, defaultSettings };")(DCLogic, ...names.map(k => g[k]));
+  const mod = new Function("DCLogic", ...names, js + "\nreturn { Component, parseBoard, serializeBoard, badgeSvg, boardCard, boardAt, deleteTask, moveTask, SEED_MD, THEMES, BASE_VARS, defaultSettings };")(DCLogic, ...names.map(k => g[k]));
   const make = () => { const c = new mod.Component({ startTheme: "minimal" }); c.componentDidMount(); return c; };
   return { ...mod, make, store, g };
 }
@@ -123,7 +123,7 @@ test("Download saves the markdown as <title>.md; Save writes to a picked file an
   c.renderVals().save(); await Bun.sleep(5);
   c.renderVals().save(); await Bun.sleep(5);
   expect([picks, written.length, written[0]]).toEqual([1, 2, serializeBoard(c.state.board)]);
-  expect(c.state.saveStatus).toMatch(/Saved to plan\.md/);
+  expect(c.state.saveStatus).toMatch(/plan\.md saved/);
 });
 
 test("the template's tags are balanced", () => {
@@ -361,4 +361,124 @@ test("the markdown is stamped with its format version", () => {
   expect(serializeBoard(parseBoard("# Bare\n"))).toStartWith("---\nversion: 1\n---\n# Bare");
   expect(() => parseBoard("---\nversion: 99\n---\n# Future\n")).toThrow(/newer than this app/);
   expect(() => parseBoard("---\nversion: one\n---\n# Bad\n")).toThrow(/whole number/);
+});
+
+test("the card: the badge's columns as the legend, done/total as the number, open tasks in the pill", () => {
+  const { boardCard } = load();
+  const board = parseBoard(SEED_MD);
+  const counts = board.columns.map((c: any) => c.tasks.length);
+  const total = counts.reduce((a: number, b: number) => a + b, 0), done = counts[counts.length - 1];
+  const c = boardCard(board, "2026-11-18", { label: "board.md" });
+  expect(c.heading).toEqual({ primary: `${done}/${total}`, label: "tasks done" });
+  expect(c.status).toEqual({ label: `${total - done} open`, tone: "neutral" });
+  expect(c.legend.map((l: any) => l.id)).toEqual(board.columns.map((col: any) => col.name));
+  expect(Object.values(c.report)).toEqual(counts);
+  const first = board.columns[0].name;                                       // only the badge's columns, in its colors
+  const picked = { ...board, settings: { ...board.settings, badge: [{ column: first, symbol: "B", icon: "", color: "#112233" }] } };
+  expect(boardCard(picked, "2026-11-18", { label: "x" }).legend).toEqual([{ id: first, label: first, color: "#112233" }]);
+});
+
+test("Save writes a ?src board back when its server allows it (x-agile-writable), and asks for a file otherwise", async () => {
+  const puts: any[] = [];
+  const serve = (writable: boolean) => (u: string, init?: any) => {
+    if (init?.method === "PUT") { puts.push([u, init.body]); return new Response(null, { status: 204 }); }
+    return new Response(other, { headers: writable ? { "x-agile-writable": "1" } : {} });
+  };
+  const c = load("?src=board.md", {}, serve(true)).make(); await Bun.sleep(5);
+  c.renderVals().onTitle({ target: { value: "Changed" } });
+  expect(c.renderVals().menuItems.find((m: any) => m.label === "Save").hint).toBe("Writes board.md");
+  await c.save();
+  expect(puts).toEqual([["https://x.test/app/board.md", serializeBoard(c.state.board)]]);
+  expect(c.state.saveStatus).toBe("board.md saved");
+  expect(c.renderVals().toast).toBe("board.md saved");                         // and shows as a toast
+  const d = load("?src=board.md", {}, serve(false)).make(); await Bun.sleep(5);
+  await d.save();                                                             // no picker in the stub: downloads
+  expect(puts.length).toBe(1);
+  expect(d.state.saveStatus).toMatch(/^Downloaded/);
+});
+
+test("the CLI writes card.json and badge.svg from a board", () => {
+  const out = require("node:fs").mkdtempSync(join(require("node:os").tmpdir(), "agile-"));
+  const run = (cmd: string) => Bun.spawnSync(["node", "bin/agile.mjs", cmd, "examples/acme-sprint/board.md", out], { cwd: import.meta.dir, env: { ...process.env, AGILE_SRC: "https://o.github.io/r/board.md" } });
+  expect(run("card").exitCode).toBe(0);
+  expect(run("badge").exitCode).toBe(0);
+  const card = JSON.parse(require("node:fs").readFileSync(join(out, "card.json"), "utf8"));
+  expect(card.title).toBe("Acme · Sprint 14");
+  expect(card.source).toEqual({ label: "examples/acme-sprint/board.md", url: "https://aaronp.github.io/agile/?src=https://o.github.io/r/board.md" });
+  expect(require("node:fs").readFileSync(join(out, "badge.svg"), "utf8")).toStartWith("<svg");
+});
+
+test("the CLI server: the app at /, the board's folder beside it, and PUT back to an existing .md only", async () => {
+  const fs = require("node:fs");
+  const dir = fs.mkdtempSync(join(require("node:os").tmpdir(), "agile-"));
+  fs.copyFileSync(join(import.meta.dir, "examples/acme-sprint/board.md"), join(dir, "board.md"));
+  const port = 20000 + Math.floor(Math.random() * 20000);
+  const proc = require("node:child_process").spawn("node", [join(import.meta.dir, "bin/agile.mjs"), join(dir, "board.md")], { env: { ...process.env, PORT: String(port), NO_OPEN: "1" } });
+  try {
+    await new Promise((ok) => proc.stdout.once("data", ok));                  // the "Serving" line
+    // node:http rather than fetch, which can be sent through an HTTP proxy
+    const at = (path: string, o: { method?: string; body?: string; host?: string } = {}) => new Promise<any>((ok, no) => {
+      const r = require("node:http").request({ host: "127.0.0.1", port, path, method: o.method ?? "GET", headers: o.host ? { host: o.host } : {} }, (res: any) => {
+        let text = ""; res.on("data", (d: any) => (text += d)); res.on("end", () => ok({ status: res.statusCode, headers: res.headers, text }));
+      });
+      r.on("error", no); r.end(o.body);
+    });
+    expect((await at("/")).text).toContain("data-dc-script");
+    expect((await at("/vendor/react.js")).status).toBe(200);
+    expect((await at("/board.md")).headers["x-agile-writable"]).toBe("1");
+    expect((await at("/board.md", { method: "PUT", body: "# Hello\n" })).status).toBe(204);
+    expect(fs.readFileSync(join(dir, "board.md"), "utf8")).toBe("# Hello\n");
+    expect((await at("/new.md", { method: "PUT", body: "x" })).status).toBe(403);
+    expect((await at("/..%2F..%2Fetc%2Fpasswd")).status).toBe(404);
+    expect((await at("/board.md", { host: "evil.test" })).status).toBe(403);
+  } finally { proc.kill(); }
+}, 10000);
+
+test("history: the board replayed to a past time, from the slider, read-only", () => {
+  const { boardAt, make } = load();
+  const md = `# Past
+
+## To Do
+
+### A
+- id: t-01
+- owner:
+- tags:
+- history:
+  - To Do @ 2026-01-01T00:00:00Z
+  - Doing @ 2026-01-02T00:00:00Z by Sam
+  - Archive @ 2026-01-03T00:00:00Z by Sam
+
+### B
+- id: t-02
+- owner: Kim
+- tags:
+- history:
+  - Old name @ 2026-01-01T12:00:00Z
+  - To Do @ 2026-01-02T12:00:00Z by Kim
+
+## Doing
+`;
+  const parsed = parseBoard(md);                                              // A goes into the archive, as the file would hold it
+  const live = { ...parsed, columns: parsed.columns.map((c: any) => ({ ...c, tasks: c.tasks.filter((t: any) => t.id !== "t-01") })), archive: parsed.columns[0].tasks.filter((t: any) => t.id === "t-01") };
+  const at = (iso: string) => { const b = boardAt(live, iso); return [b.columns.map((c: any) => [c.name, c.tasks.map((t: any) => `${t.id}:${t.owner}`)]), b.archive.map((t: any) => t.id)]; };
+  expect(at("2025-12-31T00:00:00Z")).toEqual([[["To Do", []], ["Doing", []]], []]);
+  expect(at("2026-01-01T12:00:00Z")).toEqual([[["To Do", ["t-01:"]], ["Doing", []], ["Old name", ["t-02:"]]], []]);   // a renamed column comes back
+  expect(at("2026-01-02T00:00:00Z")).toEqual([[["To Do", []], ["Doing", ["t-01:Sam"]], ["Old name", ["t-02:"]]], []]);
+  expect(at("2026-01-03T00:00:00Z")).toEqual([[["To Do", ["t-02:Kim"]], ["Doing", []]], ["t-01"]]);
+
+  const c = make();
+  c.setState({ board: live });
+  c.renderVals().toggleTime();
+  const t = () => c.renderVals().time;
+  expect([t().max, t().value, t().label]).toEqual([5, 5, "Now"]);
+  t().onChange({ target: { value: "2" } });                                   // the 3rd event: A into Doing
+  expect(t().label).toContain("A → Doing (Sam)");
+  expect(c.renderVals().rootClass).toContain("kb-past");
+  const before = c.state.board;
+  expect(c.commit((b: any) => ({ ...b, title: "Changed" }))).toBe(false);    // the past is read-only
+  expect(c.state.board).toBe(before);
+  expect(c.state.toast).toMatch(/Now to edit/);
+  t().now();
+  expect(c.state.timeAt).toBe(null);
 });

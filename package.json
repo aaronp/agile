@@ -1,0 +1,26 @@
+{
+  "name": "@pritzlaff/agile",
+  "version": "1.0.0",
+  "description": "A kanban board driven by one markdown file, in one HTML page.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aaronp/agile.git"
+  },
+  "homepage": "https://aaronp.github.io/agile/",
+  "type": "module",
+  "bin": {
+    "agile": "bin/agile.mjs"
+  },
+  "files": [
+    "bin",
+    "Main.dc.html",
+    "support.js",
+    "vendor"
+  ],
+  "scripts": {
+    "test": "bun test ./app.test.ts"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

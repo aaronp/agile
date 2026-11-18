@@ -23,7 +23,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
-      - run: bun test
+      - run: bun test ./app.test.ts
+      - run: |   # → examples/acme-sprint/badge.svg and card.json
+          node bin/agile.mjs badge examples/acme-sprint/board.md
+          node bin/agile.mjs card examples/acme-sprint/board.md
       - name: Assemble the site
         run: |
           mkdir _site
