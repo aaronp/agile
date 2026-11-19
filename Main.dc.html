@@ -838,7 +838,7 @@ const Task = T.Object({
   }),
   owner: OwnerName,
   tags: T.Array(Tag, { unique: true, doc: 'Categories for filtering; order is kept as entered.' }),
-  history: T.Array(HistoryEntry, { minItems: 1, doc: 'Append-only arrival log, oldest first.' }),
+  history: T.Array(HistoryEntry, { doc: 'Append-only arrival log, oldest first. May be empty (a hand-written task with no "- history:"); the first move or reassignment starts it.' }),
   parent: T.String({
     doc: 'Id of the task this one was split out of ("" = top level). Set when the child is created. In the same column a child shows indented under its parent; elsewhere it shows "↳ parent title". Written as "- parent: t-03", left out when empty.',
     example: 't-03', pattern: /^[A-Za-z0-9_-]*$/, patternHint: 'must be a task id',
@@ -1079,27 +1079,31 @@ function parseBoard(src) {
   let archive = null; // the archive section, once its heading is seen
   let col = null;
   let task = null; // { line, title, meta: {}, history: null | [], desc: null | [], fenceLine, fenceLen }
-  let phase = 'none'; // 'none' | 'meta' | 'history' | 'gap' | 'fence'
+  let phase = 'none'; // 'none' | 'meta' | 'history' | 'gap' | 'fence' | 'text'
   const idLines = new Map();
+  const unnamed = []; // tasks written without "- id:"
   const at = (i, msg) => fail(`Line ${i + 1}: ${msg}`);
 
   const finishTask = () => {
     if (task === null) return;
     const where = `Line ${task.line + 1} (task "${task.title}")`;
-    for (const key of ['id', 'owner', 'tags']) if (!(key in task.meta)) fail(`${where}: missing "- ${key}:" line`);
-    if (task.history === null) fail(`${where}: missing "- history:" with at least one "  - Column @ timestamp" entry`);
+    // Only the "### " title is required; everything else defaults (a missing id is filled in once the whole file is read).
+    const tags = task.meta.tags ?? '';
     const built = {
-      id: task.meta.id,
+      id: task.meta.id ?? '',
       title: task.title,
       description: task.desc === null ? '' : task.desc.join('\n').replace(/^\n+/, '').replace(/\s+$/, ''),
-      owner: task.meta.owner,
-      tags: task.meta.tags === '' ? [] : task.meta.tags.split(',').map((s) => s.trim()),
-      history: task.history,
+      owner: task.meta.owner ?? '',
+      tags: tags === '' ? [] : tags.split(',').map((s) => s.trim()),
+      history: task.history ?? [],
       parent: task.meta.parent ?? '',
     };
-    check(Task, built, where);
-    if (idLines.has(built.id)) fail(`${where}: id "${built.id}" is already used on line ${idLines.get(built.id) + 1}`);
-    idLines.set(built.id, task.line);
+    if (built.id === '') unnamed.push({ task: built, where });
+    else {
+      check(Task, built, where);
+      if (idLines.has(built.id)) fail(`${where}: id "${built.id}" is already used on line ${idLines.get(built.id) + 1}`);
+      idLines.set(built.id, task.line);
+    }
     col.tasks.push(built);
     task = null;
     phase = 'none';
@@ -1109,6 +1113,7 @@ function parseBoard(src) {
     if (i < bodyStart) return;
     const line = raw.replace(/\s+$/, '');
     let m;
+    if (phase === 'text' && !/^#{1,3}( |$)/.test(line)) { task.desc.push(line); return; } // unfenced description: runs to the next heading
     if (phase === 'fence') {
       // Inside the description fence everything is description, including "#" lines.
       if ((m = /^(`{3,})$/.exec(line)) !== null && m[1].length >= task.fenceLen) { phase = 'gap'; return; }
@@ -1125,7 +1130,7 @@ function parseBoard(src) {
     }
     if ((m = /^## (.*)$/.exec(line)) !== null) {
       finishTask();
-      if (title === null) at(i, 'expected "# Board title" before the first column');
+      if (title === null) title = 'Board';
       if (archive !== null) at(i, 'the "## Archive <!-- archive -->" section must be the last section');
       if (/<!--\s*archive\s*-->$/.test(m[1])) {
         archive = { id: null, name: 'Archive', tasks: [] };
@@ -1151,7 +1156,6 @@ function parseBoard(src) {
     if (/^#{1,3}$/.test(line)) at(i, 'heading marker with no text');
     if (task === null) {
       if (line.trim() === '') return;
-      if (title === null) at(i, 'expected "# Board title" as the first line (after any front matter)');
       if (col === null) at(i, 'only blank lines may sit between the board title and the first "## Column"');
       at(i, 'text inside a column must belong to a "### Task"');
     }
@@ -1165,8 +1169,11 @@ function parseBoard(src) {
         phase = 'fence';
         return;
       }
-      if (/^`{3,}/.test(line)) at(i, 'description fences open with ``` or ```md');
-      at(i, 'task descriptions go inside a fence: a "```md" line, the text, then a "```" line');
+      if (task.desc !== null) at(i, `task "${task.title}" already has a description (line ${task.fenceLine + 1})`);
+      task.desc = [line];
+      task.fenceLine = i;
+      phase = 'text';
+      return;
     }
     if (phase === 'meta' || phase === 'history') {
       if (line.trim() === '') { phase = 'gap'; return; }
@@ -1192,18 +1199,26 @@ function parseBoard(src) {
         phase = 'meta';
         return;
       }
-      at(i, 'expected "- key: value" metadata, or a blank line before the description');
+      phase = 'gap'; // not metadata: the description starts here
+    }
+    if (phase === 'gap') {
+      task.desc = [line];
+      task.fenceLine = i;
+      phase = 'text';
+      return;
     }
     bug(`parser reached phase "${phase}" on line ${i + 1}`);
   });
   if (phase === 'fence') fail(`Line ${task.fenceLine + 1}: description fence for "${task.title}" is never closed with a ${'`'.repeat(task.fenceLen)} line`);
   finishTask();
-  if (title === null) fail(`Line ${bodyStart + 1}: expected "# Board title"`);
-  return validateBoard({ title, settings, columns, archive: archive === null ? [] : archive.tasks });
+  if (title === null) title = 'Board';
+  const board = { title, settings, columns, archive: archive === null ? [] : archive.tasks };
+  for (const { task: t, where } of unnamed) { t.id = nextTaskId(board); check(Task, t, where); }
+  return validateBoard(board);
 }
 
 function serializeTask(t) {
-  const out = [`### ${t.title}`, `- id: ${t.id}`, ...(t.parent === '' ? [] : [`- parent: ${t.parent}`]), t.owner === '' ? '- owner:' : `- owner: ${t.owner}`, t.tags.length === 0 ? '- tags:' : `- tags: ${t.tags.join(', ')}`, '- history:'];
+  const out = [`### ${t.title}`, `- id: ${t.id}`, ...(t.parent === '' ? [] : [`- parent: ${t.parent}`]), ...(t.owner === '' ? [] : [`- owner: ${t.owner}`]), ...(t.tags.length === 0 ? [] : [`- tags: ${t.tags.join(', ')}`]), ...(t.history.length === 0 ? [] : ['- history:'])];
   for (const h of t.history) out.push(`  - ${h.column} @ ${h.at}${h.owner === '' ? '' : ` by ${h.owner}`}`);
   const desc = t.description.replace(/^\n+/, '').replace(/\s+$/, '');
   if (desc !== '') {
@@ -2816,7 +2831,6 @@ Download the current markdown, named after the **board title**.
 
 ### Keyboard moves between columns
 - id: t-02
-- owner:
 - tags: a11y, feature
 - history:
   - Backlog @ 2026-10-20T14:30:00Z
@@ -2939,6 +2953,8 @@ const VIEW_PARAM = { board: 'board', split: 'split', archive: 'archive', source:
 /** What New starts from (it keeps the current style). */
 const BLANK_MD = '# Untitled board\n\n## To Do\n\n## Doing\n\n## Done\n';
 const STORAGE_RECENTS = 'kb-recents:v1';
+const STORAGE_AUTOSAVE = 'kb-autosave:v1'; // '0' when Autosave is off
+const AUTOSAVE_MS = 800;
 const STORAGE_DRAWER_WIDTH = 'kb-drawer-width:v1';
 const DRAWER_MIN_WIDTH = 320;
 const MAX_RECENTS = 8;
@@ -2974,6 +2990,10 @@ class Component extends DCLogic {
     this.fileHandle = null;
     this.writable = null; // the ?src URL when the server that sent it takes it back (x-agile-writable: the agile CLI or make dev)
     this.lastEditKey = null; // the field last typed into: further typing there extends the same undo step
+    try { this.autosave = window.localStorage.getItem(STORAGE_AUTOSAVE) !== '0'; } catch (err) { this.autosave = true; }
+    this.savedText = null; // what the writable file is known to hold, so opening it never rewrites it
+    this.autosaveTimer = null;
+    this.onPageHide = () => { if (this.autosaveTimer !== null) this.writeBack(true); }; // closing the tab inside the debounce still writes
     this.pageKey = `${p.mode}|${p.task}`;
     this.state = {
       board: loaded.board,
@@ -3015,7 +3035,7 @@ class Component extends DCLogic {
     };
   }
 
-  static KEYS = { board: STORAGE_BOARD, recents: STORAGE_RECENTS };
+  static KEYS = { board: STORAGE_BOARD, recents: STORAGE_RECENTS, autosave: STORAGE_AUTOSAVE };
 
   /**
    * ?src=<url>  the markdown to show (absolute, or relative to the page; GitHub file links work). Not autosaved.
@@ -3165,6 +3185,7 @@ class Component extends DCLogic {
     window.addEventListener('popstate', this.onPop);
     window.addEventListener('hashchange', this.onHash);
     window.addEventListener('keydown', this.onKey);
+    window.addEventListener('pagehide', this.onPageHide);
     if (this.shared !== null) {
       decodeShare(this.shared).then((md) => { const board = parseBoard(md); this.setState({ board, saveStatus: this.persistBoard(board), now: Date.now() }); })
         .catch((err) => { this.shared = null; this.setState({ opError: `Can't open the shared link: ${err.message}`, saveStatus: this.persistBoard(this.state.board) }); });
@@ -3179,6 +3200,7 @@ class Component extends DCLogic {
   /** Keep the address bar in step: a new view or task is a history entry, anything else replaces it. */
   componentDidUpdate() {
     this.syncSharedHash();
+    this.scheduleAutosave();
     const next = Component.toQuery(this.state, this.src, location.search);
     const key = `${this.state.mode}|${this.state.editingTaskId}`;
     const isNewPage = key !== this.pageKey;
@@ -3203,6 +3225,8 @@ class Component extends DCLogic {
     window.removeEventListener('popstate', this.onPop);
     window.removeEventListener('hashchange', this.onHash);
     window.removeEventListener('keydown', this.onKey);
+    window.removeEventListener('pagehide', this.onPageHide);
+    window.clearTimeout(this.autosaveTimer);
     this.alive = false;
     window.clearTimeout(this.toastTimer);
     window.cancelAnimationFrame(this.raf);
@@ -3339,10 +3363,46 @@ class Component extends DCLogic {
     else if (d.x > r.x + r.w - edge) scroller.scrollLeft += 14;
   }
 
+  /** Writes the board back to a writable ?src file a moment after the last edit (one write per burst of typing). */
+  scheduleAutosave() {
+    if (this.writable === null || !this.autosave || this.state.board === this.autosavedBoard) return;
+    this.autosavedBoard = this.state.board;
+    window.clearTimeout(this.autosaveTimer);
+    this.autosaveTimer = window.setTimeout(() => this.autosaveNow(), AUTOSAVE_MS);
+  }
+  /** PUTs the board to the writable file unless it already holds it. Resolves to the file name written, or null when there was nothing to write. */
+  async writeBack(keepalive) {
+    window.clearTimeout(this.autosaveTimer);
+    this.autosaveTimer = null;
+    const url = this.writable;
+    const text = serializeBoard(this.state.board);
+    if (url === null || text === this.savedText) return null;
+    const res = await fetch(url, { method: 'PUT', keepalive, headers: { 'content-type': 'text/markdown; charset=utf-8' }, body: text });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    if (this.writable === url) this.savedText = text;
+    return url.split('/').pop();
+  }
+  autosaveNow() {
+    this.writeBack(false).then(
+      (name) => { if (name !== null && this.alive !== false) this.setState({ saveStatus: `Saved to ${name}` }); },
+      (err) => this.setState({ saveStatus: 'Not saved', opError: `Couldn't autosave to ${this.writable}: ${err.message}. Download the file to keep your work.` }));
+  }
+  toggleAutosave() {
+    this.autosave = !this.autosave;
+    try { window.localStorage.setItem(STORAGE_AUTOSAVE, this.autosave ? '1' : '0'); } catch (err) { /* blocked storage: remembered this session only */ }
+    this.autosavedBoard = null; // turning it on writes any unsaved edits
+    this.notify(`Autosave ${this.autosave ? 'on' : 'off'}`);
+  }
+
   /* ---- commits ---- */
   nowIso() { return new Date().toISOString(); }
   persistBoard(board) {
     if (this.shared !== null) return 'Not saved in this browser: opened from a shared link. Save or Download to keep changes.';
+    if (this.writable !== null) {
+      const name = this.writable.split('/').pop();
+      if (serializeBoard(board) === this.savedText) return `Saved to ${name}`;
+      return this.autosave ? `Saving to ${name}…` : `Unsaved: Save (Ctrl/⌘ S) writes ${name}`;
+    }
     if (this.src !== null) return `Not saved in this browser: opened from ${this.src}. Save or Download to keep changes.`;
     try {
       window.localStorage.setItem(STORAGE_BOARD, serializeBoard(board));
@@ -3421,8 +3481,12 @@ class Component extends DCLogic {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const text = await res.text();
     if (/^\s*<(!doctype|html)/i.test(text)) throw new Error('that is a web page, not a markdown file');
-    this.adopt(text, { name: url.split('/').pop() || url, url: raw.trim() }, raw.trim());
-    if (res.headers.get('x-agile-writable') !== null) this.writable = url;
+    const board = this.adopt(text, { name: url.split('/').pop() || url, url: raw.trim() }, raw.trim());
+    if (res.headers.get('x-agile-writable') === null) return;
+    this.writable = url;
+    this.savedText = serializeBoard(board); // a hand-written file is only rewritten (in canonical form) after an edit
+    this.autosavedBoard = board;
+    this.setState({ saveStatus: this.persistBoard(board) });
   }
   submitOpenUrl() {
     const raw = this.state.openUrl.trim();
@@ -3447,6 +3511,7 @@ class Component extends DCLogic {
     try { window.localStorage.setItem(STORAGE_RECENTS, JSON.stringify(recents)); } catch (err) { /* blocked storage: recents last this session only */ }
     this.lastEditKey = null;
     this.setState({ board, recents, past: [], future: [], timeAt: null, timeOpen: false, saveStatus: this.persistBoard(board), sourceDraft: null, parseError: null, drag: null, now: Date.now(), openOpen: false, openError: null, openDragging: false });
+    return board;
   }
   newBoard() {
     const ok = window.confirm(this.src === null
@@ -3524,9 +3589,9 @@ class Component extends DCLogic {
   async save() {
     if (this.writable !== null) {
       const url = this.writable;
+      this.savedText = null; // Save always writes, even when the file should already match
       try {
-        const res = await fetch(url, { method: 'PUT', headers: { 'content-type': 'text/markdown; charset=utf-8' }, body: serializeBoard(this.state.board) });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        await this.writeBack(false);
         this.notify(`${url.split('/').pop()} saved`);
       } catch (err) { this.setState({ opError: `Couldn't save to ${url}: ${err.message}` }); }
       return;
@@ -3910,10 +3975,10 @@ class Component extends DCLogic {
       const chosen = s.restoreTargets[t.id];
       // Preselect the chosen column, else the column it was archived from, else the first one.
       const target = chosen !== undefined && board.columns.some((c) => c.id === chosen) ? chosen : (prevCol ?? board.columns[0] ?? { id: '' }).id;
-      const archivedAt = [...t.history].reverse().find((h) => h.column === 'Archive') ?? bug(`archived task ${t.id} has no Archive entry`);
+      const archivedAt = [...t.history].reverse().find((h) => h.column === 'Archive'); // none when hand-written straight into the archive
       return {
         ...cardView(t, true),
-        completedAgo: `Completed ${formatDuration(s.now - Date.parse(archivedAt.at))} ago`,
+        completedAgo: archivedAt === undefined ? 'Completed' : `Completed ${formatDuration(s.now - Date.parse(archivedAt.at))} ago`,
         restoreTo: target,
         restoreOptions: board.columns.map((c) => ({ value: c.id, label: c.name })),
         restoreDisabled: board.columns.length === 0,
@@ -4140,6 +4205,7 @@ class Component extends DCLogic {
         { label: 'New', hint: 'Blank board', run: () => this.newBoard() },
         { label: 'Open…', hint: 'File, URL or recent', run: () => this.setState({ openOpen: true, openError: null, pickerOpen: false }) },
         { label: 'Save', hint: this.writable !== null ? `Writes ${this.writable.split('/').pop()}` : 'Ctrl/⌘ S', run: () => this.save() },
+        ...(this.writable === null ? [] : [{ label: `${this.autosave ? '✓' : '○'} Autosave`, hint: this.autosave ? 'On: writes each change' : 'Off', run: () => this.toggleAutosave() }]),
         { label: 'Download', hint: this.fileName(), run: () => this.notify(`Downloaded ${this.download()}`) },
         { label: 'Copy link', hint: 'Board in the URL', run: () => this.copyLink() },
         { label: 'Style', hint: theme.name, run: () => this.setState({ pickerOpen: true }) },

@@ -487,3 +487,38 @@ test("history: the board replayed to a past time, from the slider, read-only", (
   t().now();
   expect(c.state.timeAt).toBe(null);
 });
+
+test("minimal markdown: only ### titles are required; ids, owner, tags, history and the board title default", () => {
+  const b = parseBoard("## Todo\n\n### First\nJust some text\n\n- [ ] a list\n#### sub\n### Second\n- id: t-07\n- owner: Kim\n\n## Done <!-- archive -->\n### Old\n");
+  expect(b.title).toBe("Board");
+  expect(b.columns[0].tasks.map((t: any) => [t.id, t.owner, t.tags, t.history, t.description])).toEqual([["t-08", "", [], [], "Just some text\n\n- [ ] a list\n#### sub"], ["t-07", "Kim", [], [], ""]]);
+  expect(b.archive[0].id).toBe("t-09");
+  const md = serializeBoard(b);
+  expect(md).not.toContain("- history:");
+  expect(serializeBoard(parseBoard(md))).toBe(md);
+});
+
+test("Autosave writes a writable ?src board back after edits (not on open), and can be switched off", async () => {
+  const puts: string[] = [];
+  const serve = (u: string, init?: any) => {
+    if (init?.method === "PUT") { puts.push(init.body); return new Response(null, { status: 204 }); }
+    return new Response("## Todo\n### Minimal\n", { headers: { "x-agile-writable": "1" } });
+  };
+  const store: Store = {};
+  const c = load("?src=board.md", store, serve).make(); await Bun.sleep(5);
+  expect(c.state.saveStatus).toBe("Saved to board.md");
+  await Bun.sleep(900);
+  expect(puts).toEqual([]);                                                   // opening never rewrites the file
+  c.renderVals().onTitle({ target: { value: "One" } });
+  c.renderVals().onTitle({ target: { value: "Two" } });
+  expect(c.state.saveStatus).toBe("Saving to board.md…");
+  await until(() => puts.length > 0, "the autosave");
+  expect(puts).toEqual([serializeBoard(c.state.board)]);                      // one write for the burst
+  await until(() => c.state.saveStatus === "Saved to board.md", "the saved status");
+  c.renderVals().menuItems.find((m: any) => m.label.endsWith("Autosave")).pick();
+  expect(store[KEYS.autosave]).toBe("0");
+  c.renderVals().onTitle({ target: { value: "Three" } });
+  expect(c.state.saveStatus).toBe("Unsaved: Save (Ctrl/⌘ S) writes board.md");
+  await Bun.sleep(900);
+  expect(puts.length).toBe(1);
+});

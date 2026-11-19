@@ -61,6 +61,11 @@ EOF
 bun run agile    # opens it on localhost
 ````
 
+**Note:** A board can be as small as `## Column` headings and `### Task` titles. Everything else is optional: the `# Title`
+(defaults to "Board"), `- id:` (filled in as the next `t-NN`), `- owner:`, `- tags:`, `- history:`, and the description,
+which can be plain text under the task or a ```` ```md ```` fence (use a fence if the text has `#`–`###` headings).
+
+
 **Save** (Ctrl/⌘ S) writes the board back to `docs/board/board.md`, with every move recorded in the
 task's `history:`; commit it like any other source. The format is strict (every task needs `id`, `owner`,
 `tags` and `history` lines, and descriptions go in an ` ```md ` fence), and parse errors name the line.
@@ -85,6 +90,9 @@ To publish it on GitHub Pages as well, copy `board/index.html` and `.github/work
 - **Save** (Ctrl/⌘ S) writes a board served by `make dev` or the `agile` command back to its file. Otherwise
   it writes to a file you pick once, then to the same file each time; browsers without a file picker
   (Firefox, Safari) download it instead. **Download** always downloads `<title>.md`.
+- **Autosave** (in the ☰ menu, on by default; only for those `make dev` / `agile` files) writes each change back
+  800 ms after the last edit, and when the tab closes. Opening a file never rewrites it; the status bar shows
+  Saving… / Saved.
 - Nine styles (Minimal, Paper, Terminal, Ocean, Ball pit, plus Graph paper, Night shift, Blueprint and Warm ledger from [Decision Ledger](https://aaronp.github.io/adr/)), with their settings stored in the file.
 
 Edits are saved in this browser (localStorage), except for a board opened from a URL. **The `.md` file is the
