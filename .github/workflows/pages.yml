@@ -31,7 +31,7 @@ jobs:
         run: |
           mkdir _site
           cp Main.dc.html _site/index.html
-          cp -R support.js vendor examples _site/
+          cp -R support.js vendor examples spec.md _site/
           touch _site/.nojekyll
       - uses: actions/upload-pages-artifact@v3
         with:

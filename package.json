@@ -15,7 +15,8 @@
     "bin",
     "Main.dc.html",
     "support.js",
-    "vendor"
+    "vendor",
+    "spec.md"
   ],
   "scripts": {
     "test": "bun test ./app.test.ts"

@@ -7,10 +7,76 @@ A kanban board driven by **one markdown file**: columns, tasks, their owners, ta
 style. This repo is the app. Your board can live in its own repo and be loaded with `?src=` (see
 [Publishing your own board](#publishing-your-own-board)).
 
+## Adding it to your project
+
+From your project's root (Bun shown; `npm i -D`, `npm pkg set` and `npm run` work the same):
+
+````sh
+bun add -d @pritzlaff/agile
+bun pm pkg set scripts.agile="agile docs/board/board.md"
+mkdir -p docs/board
+cat > docs/board/board.md <<'EOF'
+---
+version: 1
+theme: paper
+---
+# My app
+
+## To Do
+
+### Set up CI
+- id: t-01
+- owner: Priya
+- tags: infra
+- history:
+  - To Do @ 2026-11-19T09:00:00Z by Priya
+
+```md
+Run the tests on every push.
+
+- [ ] lint
+- [ ] tests
+```
+
+## Doing
+
+### Login page
+- id: t-02
+- owner: Tom
+- tags: frontend
+- history:
+  - To Do @ 2026-11-18T09:00:00Z by Tom
+  - Doing @ 2026-11-19T10:30:00Z by Tom
+
+### Password reset
+- id: t-03
+- parent: t-02
+- owner:
+- tags: frontend
+- history:
+  - Doing @ 2026-11-19T11:00:00Z
+
+## Done
+EOF
+bun run agile    # opens it on localhost
+````
+
+**Save** (Ctrl/⌘ S) writes the board back to `docs/board/board.md`, with every move recorded in the
+task's `history:`; commit it like any other source. The format is strict (every task needs `id`, `owner`,
+`tags` and `history` lines, and descriptions go in an ` ```md ` fence), and parse errors name the line.
+The full format is in **[spec.md](spec.md)**, also published at <https://aaronp.github.io/agile/spec.md> and shipped in the package as `node_modules/@pritzlaff/agile/spec.md`, so people and agents working in your repo can read the version they run.
+
+`agile card docs/board/board.md` and `agile badge docs/board/board.md` write `card.json` and `badge.svg`
+beside it, for a dashboard or a README badge.
+To publish it on GitHub Pages as well, copy `board/index.html` and `.github/workflows/pages.yml` from
+[examples/bun-app](examples/bun-app), which is this setup end to end with the file in `board/`
+(change that path in the workflow to match yours).
+[aaronp/template](https://github.com/aaronp/template) is a project with this and its sibling tools (goals, architecture, decisions, risks, schedule, delivery) set up together behind one dashboard.
+
 - **Board**, **Split** (board beside its markdown), **Archive** and **Markdown** views.
 - The **☰ menu** holds **New**, **Open**, **Save**, **Download**, **Copy link** and **Style**.
 - **Copy link** copies a URL with the whole board compressed into it (`#board=…`, deflate + base64url), plus the current view and filters. Opening it shows that board without overwriting the one saved in that browser, and edits to it update the `#board=` in the address bar; it lives in the hash, so it never reaches the server. Links over 2000 characters copy with a warning, since some apps cut them.
-- **Badge and card**: the top of the ☰ menu shows an SVG badge of task counts, like `B: 4 📋 | P: 2 ⏳ | D: 7 ✅`. Click it to choose which columns it shows, each with a symbol (up to 6 characters), an icon and a color (saved in the file as `badge:` in the front matter), and to download or copy the badge and `card.json`. `card.json` is the board as data for a dashboard: title, a status pill (`3 open` or `All done`), done/total, and a count per badge column in the badge's colors; the dialog previews it. In CI, `agile badge` and `agile card` write the same files (see [Using it in a project](#using-it-in-a-project)).
+- **Badge and card**: the top of the ☰ menu shows an SVG badge of task counts, like `B: 4 📋 | P: 2 ⏳ | D: 7 ✅`. Click it to choose which columns it shows, each with a symbol (up to 6 characters), an icon and a color (saved in the file as `badge:` in the front matter), and to download or copy the badge and `card.json`. `card.json` is the board as data for a dashboard: title, a status pill (`3 open` or `All done`), done/total, and a count per badge column in the badge's colors; the dialog previews it. In CI, `agile badge` and `agile card` write the same files (see [The `agile` CLI](#the-agile-cli)).
 - **New** starts a blank board (To Do, Doing, Done) in the current style, after asking, since it replaces the board saved in this browser.
 - **Child tasks**: the **+** on a card (on hover) or **Create child task** in the task panel adds a task under it, nested as deep as you like. Children sit indented beneath their parent with a connecting line; one moved to another column shows "↳ parent", and leaves a dotted stand-in under the parent that jumps to it. The chevron on a parent folds its children away. Saved as `- parent: t-03`.
 - **History** (the clock beside Undo / Redo): a time slider with a step for every move in the tasks' history, archived ones included. It shows the board, archive and markdown as they stood then, read-only; **Now** returns to the live board. It's replayed from each task's `history:`, so deleted tasks don't appear, columns since renamed come back under their old names, and titles, tags and descriptions are today's.
@@ -44,7 +110,7 @@ make dev     # serves the repo on http://localhost:8000/ and prints the example'
 
 Save writes the `?src=` file back to disk (any existing `.md` in the repo). The server only listens on loopback.
 
-## Using it in a project
+## The `agile` CLI
 
 The app is published to npm as [`@pritzlaff/agile`](https://www.npmjs.com/package/@pritzlaff/agile):
 
