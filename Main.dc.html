@@ -63,6 +63,9 @@ body{margin:0}
 .kb-col-name:hover{border-color:var(--line)}
 .kb-col-name:focus{background:var(--control)}
 .kb-col-count{font-size:12px;color:inherit;opacity:.75;font-family:var(--mono);padding:0 4px}
+button.kb-col-count{border:0;background:transparent;border-radius:var(--radius);height:24px;cursor:pointer}
+button.kb-col-count:hover:not(:disabled){opacity:1;background:var(--control)}
+button.kb-col-count:disabled{cursor:default}
 .kb-icon{display:inline-grid;place-items:center;width:30px;height:30px;border:0;border-radius:var(--radius);background:transparent;cursor:pointer;color:inherit;opacity:.7;flex:none}
 .kb-icon:hover:not(:disabled){opacity:1;background:var(--control)}
 .kb-icon:disabled{opacity:.25;cursor:not-allowed}
@@ -379,7 +382,7 @@ a.kb-menu-item{color:inherit;text-decoration:none}
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.6"></circle><circle cx="15" cy="6" r="1.6"></circle><circle cx="9" cy="12" r="1.6"></circle><circle cx="15" cy="12" r="1.6"></circle><circle cx="9" cy="18" r="1.6"></circle><circle cx="15" cy="18" r="1.6"></circle></svg>
                 </button>
                 <input class="kb-col-name" data-kb-col="{{col.nameRef}}" aria-label="Column name" value="{{col.nameValue}}" onChange="{{col.onName}}" onBlur="{{col.onNameBlur}}">
-                <span class="kb-col-count">{{col.countLabel}}</span>
+                <button class="kb-col-count" aria-label="{{col.countActionLabel}}" title="{{col.countTitle}}" aria-haspopup="dialog" disabled="{{col.countDisabled}}" onClick="{{col.openActions}}">{{col.countLabel}}</button>
                 <button class="kb-icon" aria-label="{{col.deleteLabel}}" title="{{col.deleteTitle}}" disabled="{{col.deleteDisabled}}" onClick="{{col.onDelete}}">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
                 </button>
@@ -590,6 +593,41 @@ a.kb-menu-item{color:inherit;text-decoration:none}
       </div>
       <sc-if value="{{editor.descriptionError}}" hint-placeholder-val="{{ false }}"><p class="kb-field-error">{{editor.descriptionError}}</p></sc-if>
       <div class="kb-field">
+        <button class="kb-hist-toggle" aria-expanded="{{editor.dodOpen}}" onClick="{{editor.toggleDod}}">
+          <svg class="kb-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"></path></svg>
+          <span class="kb-hist-title">Definition of done</span>
+          <span class="kb-hist-summary"><span>{{editor.dodSummary}}</span></span>
+        </button>
+        <sc-if value="{{editor.dodOpen}}" hint-placeholder-val="{{ false }}">
+          <div class="kb-desc-head">
+            <span></span>
+            <div class="kb-tabs" role="group" aria-label="Definition of done view">
+              <button class="kb-tab" tabindex="-1" aria-pressed="{{editor.dodIsWrite}}" onClick="{{editor.dodShowWrite}}">Write</button>
+              <button class="kb-tab" tabindex="-1" aria-pressed="{{editor.dodIsPreview}}" onClick="{{editor.dodShowPreview}}">Preview</button>
+            </div>
+          </div>
+          <sc-if value="{{editor.dodIsWrite}}" hint-placeholder-val="{{ true }}">
+            <div class="kb-md-editor">
+              <div class="kb-fmtbar" role="toolbar" aria-label="Formatting">
+                <sc-for list="{{editor.dodFormatButtons}}" as="fb" hint-placeholder-count="10">
+                  <button class="{{fb.cls}}" tabindex="-1" aria-label="{{fb.label}}" title="{{fb.title}}" onMouseDown="{{fb.keepFocus}}" onClick="{{fb.apply}}">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{fb.d}}"></path></svg>
+                  </button>
+                </sc-for>
+              </div>
+              <textarea data-kb-dod="{{uid}}" aria-label="Definition of done (markdown)" placeholder="- [ ] tests pass" spellcheck="true" value="{{editor.dod}}" onChange="{{editor.onDod}}" onKeyDown="{{editor.onDodKey}}" onBlur="{{editor.onBlurDod}}"></textarea>
+            </div>
+          </sc-if>
+          <sc-if value="{{editor.dodIsPreview}}" hint-placeholder-val="{{ false }}">
+            <div class="kb-preview md" title="Click to edit" onClick="{{editor.dodEditFromPreview}}">
+            <sc-for list="{{editor.dodPreview}}" as="blk" hint-placeholder-count="1"><sc-if value="{{blk.isPara}}" hint-placeholder-val="{{ true }}"><p class="md-p"><sc-for list="{{blk.spans}}" as="sp"><sc-if value="{{sp.isLink}}" hint-placeholder-val="{{ false }}"><a class="{{sp.cls}}" href="{{sp.href}}" target="_blank" rel="noopener noreferrer">{{sp.text}}</a></sc-if><sc-if value="{{sp.isPlain}}" hint-placeholder-val="{{ true }}"><span class="{{sp.cls}}">{{sp.text}}</span></sc-if></sc-for></p></sc-if><sc-if value="{{blk.isHeading}}" hint-placeholder-val="{{ false }}"><p class="md-h"><sc-for list="{{blk.spans}}" as="sp"><sc-if value="{{sp.isLink}}" hint-placeholder-val="{{ false }}"><a class="{{sp.cls}}" href="{{sp.href}}" target="_blank" rel="noopener noreferrer">{{sp.text}}</a></sc-if><sc-if value="{{sp.isPlain}}" hint-placeholder-val="{{ true }}"><span class="{{sp.cls}}">{{sp.text}}</span></sc-if></sc-for></p></sc-if><sc-if value="{{blk.isQuote}}" hint-placeholder-val="{{ false }}"><blockquote class="md-q"><sc-for list="{{blk.spans}}" as="sp"><sc-if value="{{sp.isLink}}" hint-placeholder-val="{{ false }}"><a class="{{sp.cls}}" href="{{sp.href}}" target="_blank" rel="noopener noreferrer">{{sp.text}}</a></sc-if><sc-if value="{{sp.isPlain}}" hint-placeholder-val="{{ true }}"><span class="{{sp.cls}}">{{sp.text}}</span></sc-if></sc-for></blockquote></sc-if><sc-if value="{{blk.isCode}}" hint-placeholder-val="{{ false }}"><pre class="md-pre"><code>{{blk.text}}</code></pre></sc-if><sc-if value="{{blk.isRule}}" hint-placeholder-val="{{ false }}"><hr class="md-hr"></sc-if><sc-if value="{{blk.isList}}" hint-placeholder-val="{{ false }}"><ul class="md-list"><sc-for list="{{blk.items}}" as="li"><li class="md-li" style="{{li.style}}"><sc-if value="{{li.isCheck}}" hint-placeholder-val="{{ false }}"><input type="checkbox" aria-label="{{li.checkLabel}}" checked="{{li.checked}}" onChange="{{li.toggle}}"></sc-if><sc-if value="{{li.isMarker}}" hint-placeholder-val="{{ true }}"><span class="md-marker" aria-hidden="true">{{li.marker}}</span></sc-if><span class="{{li.bodyCls}}"><sc-for list="{{li.spans}}" as="sp"><sc-if value="{{sp.isLink}}" hint-placeholder-val="{{ false }}"><a class="{{sp.cls}}" href="{{sp.href}}" target="_blank" rel="noopener noreferrer">{{sp.text}}</a></sc-if><sc-if value="{{sp.isPlain}}" hint-placeholder-val="{{ true }}"><span class="{{sp.cls}}">{{sp.text}}</span></sc-if></sc-for></span></li></sc-for></ul></sc-if></sc-for>
+              <sc-if value="{{editor.dodPreviewEmpty}}" hint-placeholder-val="{{ false }}"><p class="md-p kb-muted">Nothing to preview yet.</p></sc-if>
+            </div>
+          </sc-if>
+        </sc-if>
+      </div>
+      <sc-if value="{{editor.dodError}}" hint-placeholder-val="{{ false }}"><p class="kb-field-error">{{editor.dodError}}</p></sc-if>
+      <div class="kb-field">
         <span>Tags</span>
         <div class="kb-pills kb-tag-edit">
           <sc-for list="{{editor.tags}}" as="tg">
@@ -650,6 +688,26 @@ a.kb-menu-item{color:inherit;text-decoration:none}
           </button>
           <button class="kb-danger" onClick="{{editor.onDelete}}">Delete</button>
           <button class="kb-btn" onClick="{{editor.closeCompleteDialog}}">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{colDialog}}" hint-placeholder-val="{{ false }}">
+    <div class="kb-modal-back" onClick="{{colDialog.backdrop}}" onKeyDown="{{colDialog.onKey}}">
+      <div class="kb-modal kb-modal-small" role="dialog" aria-modal="true" aria-labelledby="kb-coldlg-h">
+        <div class="kb-modal-head">
+          <h2 id="kb-coldlg-h">{{colDialog.title}}</h2>
+          <button class="kb-icon" aria-label="Close" onClick="{{colDialog.close}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+        </div>
+        <p class="kb-muted kb-small">Mark all done moves every task in this column to the archive (see the Archive view). Clear deletes them all. Undo brings them back.</p>
+        <div class="kb-actions">
+          <button class="kb-primary" data-kb-coldone="{{uid}}" onClick="{{colDialog.onDone}}">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5L20 7"></path></svg>
+            <span>Mark all done</span>
+          </button>
+          <button class="kb-danger" onClick="{{colDialog.onClear}}">Clear</button>
+          <button class="kb-btn" onClick="{{colDialog.close}}">Cancel</button>
         </div>
       </div>
     </div>
@@ -835,6 +893,10 @@ const Task = T.Object({
   description: T.String({
     doc: 'Markdown body (bold, italics, lists, checklists, quotes, code). Stored in the file inside a ```md fence under the metadata, so headings and lists in it never clash with the board structure. The serializer lengthens the fence if the text itself contains ``` lines. Empty string = no fence written.',
     example: 'Hook the form up to **/api/session**.\n\n- [ ] happy path\n- [x] error states',
+  }),
+  dod: T.String({
+    doc: 'Optional definition of done, markdown like the description (usually a checklist). Stored in a ```dod fence after the description. Empty string = no fence written.',
+    example: '- [ ] tests pass\n- [ ] docs updated',
   }),
   owner: OwnerName,
   tags: T.Array(Tag, { unique: true, doc: 'Categories for filtering; order is kept as entered.' }),
@@ -1078,7 +1140,7 @@ function parseBoard(src) {
   const columns = [];
   let archive = null; // the archive section, once its heading is seen
   let col = null;
-  let task = null; // { line, title, meta: {}, history: null | [], desc: null | [], fenceLine, fenceLen }
+  let task = null; // { line, title, meta: {}, history: null | [], desc: null | [], dod: null | [], fenceLine, fenceLen, fenceTo }
   let phase = 'none'; // 'none' | 'meta' | 'history' | 'gap' | 'fence' | 'text'
   const idLines = new Map();
   const unnamed = []; // tasks written without "- id:"
@@ -1093,6 +1155,7 @@ function parseBoard(src) {
       id: task.meta.id ?? '',
       title: task.title,
       description: task.desc === null ? '' : task.desc.join('\n').replace(/^\n+/, '').replace(/\s+$/, ''),
+      dod: task.dod === null ? '' : task.dod.join('\n').replace(/^\n+/, '').replace(/\s+$/, ''),
       owner: task.meta.owner ?? '',
       tags: tags === '' ? [] : tags.split(',').map((s) => s.trim()),
       history: task.history ?? [],
@@ -1113,11 +1176,12 @@ function parseBoard(src) {
     if (i < bodyStart) return;
     const line = raw.replace(/\s+$/, '');
     let m;
+    if (phase === 'text' && /^`{3,}\s*dod$/.test(line)) phase = 'gap'; // a ```dod fence ends an unfenced description
     if (phase === 'text' && !/^#{1,3}( |$)/.test(line)) { task.desc.push(line); return; } // unfenced description: runs to the next heading
     if (phase === 'fence') {
-      // Inside the description fence everything is description, including "#" lines.
+      // Inside a fence everything is its text, including "#" lines.
       if ((m = /^(`{3,})$/.exec(line)) !== null && m[1].length >= task.fenceLen) { phase = 'gap'; return; }
-      task.desc.push(line);
+      task[task.fenceTo].push(line);
       return;
     }
     if (line === '---') at(i, 'front matter ("---" block) must start on the very first line');
@@ -1149,7 +1213,7 @@ function parseBoard(src) {
       if (col === null) at(i, 'task appears before any "## Column"');
       const t = m[1].trim();
       if (t === '') at(i, 'task title is empty');
-      task = { line: i, title: t, meta: {}, history: null, desc: null, fenceLine: -1, fenceLen: 0 };
+      task = { line: i, title: t, meta: {}, history: null, desc: null, dod: null, fenceLine: -1, fenceLen: 0, fenceTo: 'desc' };
       phase = 'meta';
       return;
     }
@@ -1161,11 +1225,13 @@ function parseBoard(src) {
     }
     if (phase === 'gap') {
       if (line.trim() === '') return;
-      if ((m = /^(`{3,})\s*(md|markdown)?$/.exec(line)) !== null) {
-        if (task.desc !== null) at(i, `task "${task.title}" already has a description block (line ${task.fenceLine + 1})`);
-        task.desc = [];
+      if ((m = /^(`{3,})\s*(md|markdown|dod)?$/.exec(line)) !== null) {
+        const to = m[2] === 'dod' ? 'dod' : 'desc';
+        if (task[to] !== null) at(i, `task "${task.title}" already has a ${to === 'dod' ? 'definition of done' : 'description'} block`);
+        task[to] = [];
         task.fenceLine = i;
         task.fenceLen = m[1].length;
+        task.fenceTo = to;
         phase = 'fence';
         return;
       }
@@ -1209,7 +1275,7 @@ function parseBoard(src) {
     }
     bug(`parser reached phase "${phase}" on line ${i + 1}`);
   });
-  if (phase === 'fence') fail(`Line ${task.fenceLine + 1}: description fence for "${task.title}" is never closed with a ${'`'.repeat(task.fenceLen)} line`);
+  if (phase === 'fence') fail(`Line ${task.fenceLine + 1}: ${task.fenceTo === 'dod' ? 'definition of done' : 'description'} fence for "${task.title}" is never closed with a ${'`'.repeat(task.fenceLen)} line`);
   finishTask();
   if (title === null) title = 'Board';
   const board = { title, settings, columns, archive: archive === null ? [] : archive.tasks };
@@ -1220,12 +1286,13 @@ function parseBoard(src) {
 function serializeTask(t) {
   const out = [`### ${t.title}`, `- id: ${t.id}`, ...(t.parent === '' ? [] : [`- parent: ${t.parent}`]), ...(t.owner === '' ? [] : [`- owner: ${t.owner}`]), ...(t.tags.length === 0 ? [] : [`- tags: ${t.tags.join(', ')}`]), ...(t.history.length === 0 ? [] : ['- history:'])];
   for (const h of t.history) out.push(`  - ${h.column} @ ${h.at}${h.owner === '' ? '' : ` by ${h.owner}`}`);
-  const desc = t.description.replace(/^\n+/, '').replace(/\s+$/, '');
-  if (desc !== '') {
-    const body = desc.split('\n').map((l) => l.replace(/\s+$/, ''));
+  for (const [text, lang] of [[t.description, 'md'], [t.dod, 'dod']]) {
+    const trimmed = text.replace(/^\n+/, '').replace(/\s+$/, '');
+    if (trimmed === '') continue;
+    const body = trimmed.split('\n').map((l) => l.replace(/\s+$/, ''));
     const longest = body.reduce((n, l) => { const m = /^(`{3,})/.exec(l); return m === null ? n : Math.max(n, m[1].length); }, 0);
     const fence = '`'.repeat(Math.max(3, longest + 1));
-    out.push('', `${fence}md`, ...body, fence);
+    out.push('', `${fence}${lang}`, ...body, fence);
   }
   out.push('');
   return out;
@@ -1290,12 +1357,14 @@ function setBoardTitle(board, title) { return validateBoard({ ...board, title })
 function addTask(board, colId, title, at, parent = '') {
   const col = findColumn(board, colId);
   const id = nextTaskId(board);
-  const task = { id, title, description: '', owner: '', tags: [], history: [{ column: col.name, at, owner: '' }], parent };
+  const task = { id, title, description: '', dod: '', owner: '', tags: [], history: [{ column: col.name, at, owner: '' }], parent };
   return { board: withColumns(board, board.columns.map((c) => (c.id === colId ? { ...c, tasks: [...c.tasks, task] } : c))), id };
 }
 
 /** Owner goes through reassignTask so each handover is recorded; the other fields are plain edits. */
-const EDITABLE_TASK_FIELDS = ['title', 'description', 'tags'];
+/** The task panel's markdown fields and the attribute that finds each one's textarea. */
+const MD_FIELDS = { description: 'data-kb-desc', dod: 'data-kb-dod' };
+const EDITABLE_TASK_FIELDS = ['title', 'description', 'dod', 'tags'];
 function updateTask(board, taskId, patch) {
   for (const key of Object.keys(patch)) if (!EDITABLE_TASK_FIELDS.includes(key)) bug(`updateTask can't change "${key}"`);
   return mapTask(board, taskId, (t) => ({ ...t, ...patch }));
@@ -1338,6 +1407,10 @@ function archiveTask(board, taskId, at) {
   const archived = { ...task, history: [...task.history, { column: 'Archive', at, owner: task.owner }] };
   return withColumns({ ...board, archive: [...board.archive, archived] }, board.columns.map((c) => (c.id === col.id ? { ...c, tasks: c.tasks.filter((t) => t.id !== taskId) } : c)));
 }
+
+/** Whole-column versions: every task in the column, top to bottom (the archive keeps that order). */
+const archiveColumn = (board, colId, at) => findColumn(board, colId).tasks.reduce((b, t) => archiveTask(b, t.id, at), board);
+const clearColumn = (board, colId) => findColumn(board, colId).tasks.reduce((b, t) => deleteTask(b, t.id), board);
 
 /** Bring an archived task back to the end of `colId`. */
 function restoreTask(board, taskId, colId, at) {
@@ -1456,7 +1529,7 @@ function deleteColumn(board, colId) {
 function taskMatches(task, filter) {
   const words = filter.query.trim().toLowerCase().split(/\s+/).filter((w) => w !== '');
   if (words.length > 0) {
-    const hay = [task.title, task.description, task.owner, ...task.tags].join('\n').toLowerCase();
+    const hay = [task.title, task.description, task.dod, task.owner, ...task.tags].join('\n').toLowerCase();
     if (!words.every((w) => hay.includes(w))) return false;
   }
   if (filter.tags.length > 0 && !filter.tags.some((t) => task.tags.includes(t))) return false;
@@ -3014,6 +3087,8 @@ class Component extends DCLogic {
       fieldErrors: {},
       tagInput: '',
       descTab: 'preview',
+      dodTab: 'preview',
+      dodOpen: false,
       historyOpen: false,
       timeOpen: false, // the time slider
       timeAt: null, // the ISO time the board is shown at; null = now (editable)
@@ -3027,6 +3102,7 @@ class Component extends DCLogic {
       menuOpen: false,
       badgeOpen: false,
       completeDialogFor: null,
+      colDialogFor: null, // the column whose "mark all done / clear" dialog is open
       drawerWidth: Component.loadDrawerWidth(),
       collapsed: [], // ids of tasks whose children are folded away (this session only)
       past: [], future: [], // undo/redo: earlier and undone boards, nearest last / first
@@ -3174,7 +3250,7 @@ class Component extends DCLogic {
       const key = e.key.toLowerCase();
       if (key === 's') { e.preventDefault(); this.save(); return; }
       // Cmd/Ctrl+Enter is the task drawer's Ok.
-      if (key === 'enter' && this.state.editingTaskId !== null && this.state.completeDialogFor === null) { e.preventDefault(); this.setState({ editingTaskId: null, drafts: {}, fieldErrors: {}, tagInput: '' }); return; }
+      if (key === 'enter' && this.state.editingTaskId !== null && this.state.completeDialogFor === null && this.state.colDialogFor === null) { e.preventDefault(); this.setState({ editingTaskId: null, drafts: {}, fieldErrors: {}, tagInput: '' }); return; }
       if (key !== 'z' && key !== 'y') return;
       // Text fields keep the browser's own undo for what's being typed.
       if (typeof e.target?.closest === 'function' && e.target.closest('input,textarea,select,[contenteditable]') !== null) return;
@@ -3610,37 +3686,38 @@ class Component extends DCLogic {
     }
   }
 
-  openTask(id) { this.setState({ editingTaskId: id, descTab: 'preview', tagInput: '', drafts: {}, fieldErrors: {}, pickerOpen: false, historyOpen: false }); }
+  openTask(id) { this.setState({ editingTaskId: id, descTab: 'preview', dodTab: 'preview', tagInput: '', drafts: {}, fieldErrors: {}, pickerOpen: false, historyOpen: false, dodOpen: false }); }
 
-  /* ---- description editor (toolbar, shortcuts, list continuation) ---- */
-  setDescription(taskId, res) {
-    this.editField(`task.${taskId}.description`, res.text, (b) => updateTask(b, taskId, { description: res.text }), () => {
-      const el = document.querySelector(`[data-kb-desc="${this.uid}"]`);
+  /* ---- markdown editors: description and definition of done (toolbar, shortcuts, list continuation) ---- */
+  mdEditor(field) { return document.querySelector(`[${MD_FIELDS[field]}="${this.uid}"]`); }
+  setDescription(taskId, res, field = 'description') {
+    this.editField(`task.${taskId}.${field}`, res.text, (b) => updateTask(b, taskId, { [field]: res.text }), () => {
+      const el = this.mdEditor(field);
       if (el === null) return; // the panel was closed before the update landed
       el.focus();
       el.setSelectionRange(res.start, res.end);
     });
   }
-  formatDescription(taskId, kind) {
-    const el = document.querySelector(`[data-kb-desc="${this.uid}"]`);
-    if (el === null) bug('format button pressed with no description editor on screen');
-    this.setDescription(taskId, applyFormat(el.value, el.selectionStart, el.selectionEnd, kind));
+  formatDescription(taskId, kind, field = 'description') {
+    const el = this.mdEditor(field);
+    if (el === null) bug(`format button pressed with no ${field} editor on screen`);
+    this.setDescription(taskId, applyFormat(el.value, el.selectionStart, el.selectionEnd, kind), field);
   }
-  handleDescriptionKey(e, taskId) {
+  handleDescriptionKey(e, taskId, field = 'description') {
     const el = e.target;
     const key = e.key.toLowerCase();
     if ((e.metaKey || e.ctrlKey) && !e.altKey) {
       const kind = e.shiftKey ? (key === 'x' ? 'strike' : null) : ({ b: 'bold', i: 'italic', e: 'code', k: 'link' })[key] ?? null;
       if (kind === null) return;
       e.preventDefault();
-      this.setDescription(taskId, applyFormat(el.value, el.selectionStart, el.selectionEnd, kind));
+      this.setDescription(taskId, applyFormat(el.value, el.selectionStart, el.selectionEnd, kind), field);
       return;
     }
     if (e.key === 'Enter' && !e.shiftKey && !e.altKey) {
       const res = continueList(el.value, el.selectionStart, el.selectionEnd);
       if (res === null) return;
       e.preventDefault();
-      this.setDescription(taskId, res);
+      this.setDescription(taskId, res, field);
     }
   }
   endField(key) {
@@ -3720,7 +3797,7 @@ class Component extends DCLogic {
     const ok = this.commit((b) => { created = addTask(b, colId, parent === '' ? 'New task' : 'New child task', at, parent); return created.board; });
     if (!ok) return;
     const id = created.id;
-    this.setState({ editingTaskId: id, descTab: 'preview', drafts: {}, fieldErrors: {}, tagInput: '', pickerOpen: false, historyOpen: false, fresh: kind === null ? null : { id, cls: ENTRY_CLASS[kind] } }, () => {
+    this.setState({ editingTaskId: id, descTab: 'preview', dodTab: 'write', drafts: {}, fieldErrors: {}, tagInput: '', pickerOpen: false, historyOpen: false, dodOpen: false, fresh: kind === null ? null : { id, cls: ENTRY_CLASS[kind] } }, () => {
       // Focus the title with its placeholder text selected, so typing replaces it (next frame: the panel has rendered by then).
       window.requestAnimationFrame(() => {
         const input = document.querySelector(`[data-kb-title="${this.uid}"]`);
@@ -3838,6 +3915,10 @@ class Component extends DCLogic {
         nameRef: `${this.uid}.${col.id}`,
         nameError: s.fieldErrors[nameKey] ?? null,
         countLabel: hidden > 0 ? `${visible.length}/${col.tasks.length}` : String(col.tasks.length),
+        countDisabled: col.tasks.length === 0,
+        countActionLabel: `${col.tasks.length} tasks in ${col.name}: mark all done or clear`,
+        countTitle: col.tasks.length === 0 ? 'No tasks' : 'Mark all done or clear…',
+        openActions: () => this.setState({ colDialogFor: col.id }, () => window.requestAnimationFrame(() => document.querySelector(`[data-kb-coldone="${this.uid}"]`)?.focus())),
         gripLabel: `Drag column ${col.name}`,
         deleteLabel: `Delete column ${col.name}`,
         deleteDisabled: col.tasks.length > 0,
@@ -3876,6 +3957,15 @@ class Component extends DCLogic {
       const k = (f) => `task.${t.id}.${f}`;
       const field = (f) => (k(f) in s.drafts ? s.drafts[k(f)] : t[f]);
       const descText = field('description');
+      const dodText = field('dod');
+      const fmtButtons = (f) => FORMAT_BUTTONS.map((fb) => ({
+        label: fb.label, d: fb.d,
+        title: fb.keys === '' ? fb.label : `${fb.label} (${fb.keys})`,
+        cls: fb.sep === true ? 'kb-fmt kb-fmt-sep' : 'kb-fmt',
+        keepFocus: (e) => e.preventDefault(),
+        apply: () => this.formatDescription(t.id, fb.kind, f),
+      }));
+      const dodChecks = dodText.split('\n').filter((l) => /^\s*[-*+] \[[ xX]\]/.test(l));
       editor = {
         isWrite: s.descTab === 'write',
         isPreview: s.descTab === 'preview',
@@ -3885,19 +3975,36 @@ class Component extends DCLogic {
           if (e.target.closest('a') !== null) return; // let links open
           this.setState({ descTab: 'write' }, () => document.querySelector(`[data-kb-desc="${this.uid}"]`)?.focus());
         },
-        formatButtons: FORMAT_BUTTONS.map((fb) => ({
-          label: fb.label, d: fb.d,
-          title: fb.keys === '' ? fb.label : `${fb.label} (${fb.keys})`,
-          cls: fb.sep === true ? 'kb-fmt kb-fmt-sep' : 'kb-fmt',
-          keepFocus: (e) => e.preventDefault(),
-          apply: () => this.formatDescription(t.id, fb.kind),
-        })),
+        formatButtons: fmtButtons('description'),
         onDescriptionKey: (e) => this.handleDescriptionKey(e, t.id),
         preview: markdownView(descText, {
           links: true,
           onToggle: (line) => { const next = toggleCheckLine(descText, line); this.editField(k('description'), next, (b) => updateTask(b, t.id, { description: next })); },
         }),
         previewEmpty: descText.trim() === '',
+        dodOpen: s.dodOpen,
+        // Opening an empty one goes straight to writing.
+        toggleDod: () => this.setState({ dodOpen: !s.dodOpen, dodTab: dodText.trim() === '' ? 'write' : s.dodTab }),
+        dodSummary: dodChecks.length > 0 ? `${dodChecks.filter((l) => /\[[xX]\]/.test(l)).length}/${dodChecks.length} done` : dodText.trim() === '' ? 'Not set' : '',
+        dodIsWrite: s.dodTab === 'write',
+        dodIsPreview: s.dodTab === 'preview',
+        dodShowWrite: () => this.setState({ dodTab: 'write' }),
+        dodShowPreview: () => this.setState({ dodTab: 'preview' }),
+        dodEditFromPreview: (e) => {
+          if (e.target.closest('a, input') !== null) return; // let links and checkboxes work
+          this.setState({ dodTab: 'write' }, () => this.mdEditor('dod')?.focus());
+        },
+        dodFormatButtons: fmtButtons('dod'),
+        onDodKey: (e) => this.handleDescriptionKey(e, t.id, 'dod'),
+        dodPreview: markdownView(dodText, {
+          links: true,
+          onToggle: (line) => { const next = toggleCheckLine(dodText, line); this.editField(k('dod'), next, (b) => updateTask(b, t.id, { dod: next })); },
+        }),
+        dodPreviewEmpty: dodText.trim() === '',
+        dod: dodText,
+        dodError: s.fieldErrors[k('dod')] ?? null,
+        onDod: (e) => { const raw = e.target.value; this.editField(k('dod'), raw, (b) => updateTask(b, t.id, { dod: raw })); },
+        onBlurDod: () => this.endField(k('dod')),
         id: t.id, columnName: c === null ? 'Archive' : c.name,
         title: field('title'), owner: field('owner'), description: field('description'),
         titleError: s.fieldErrors[k('title')] ?? null, ownerError: s.fieldErrors[k('owner')] ?? null, descriptionError: s.fieldErrors[k('description')] ?? null,
@@ -4011,6 +4118,29 @@ class Component extends DCLogic {
       };
     });
 
+    const dlgCol = board.columns.find((c) => c.id === s.colDialogFor && c.tasks.length > 0); // gone (undo, emptied) = closed
+    const closeCol = () => this.setState({ colDialogFor: null });
+    // Celebrate over the column itself; its cards are about to leave.
+    const colRect = (id) => { const el = document.querySelector(`[data-col-drop="${id}"]`); return el === null ? null : this.elRect(el); };
+    const leave = () => ({ colDialogFor: null, completeDialogFor: null, editingTaskId: dlgCol.tasks.some((t) => t.id === s.editingTaskId) ? null : s.editingTaskId });
+    const colDialog = dlgCol === undefined ? null : {
+      title: `${dlgCol.name} · ${dlgCol.tasks.length} task${dlgCol.tasks.length === 1 ? '' : 's'}`,
+      close: closeCol,
+      backdrop: (e) => { if (e.target === e.currentTarget) closeCol(); },
+      onKey: (e) => { if (e.key === 'Escape') { e.stopPropagation(); closeCol(); } },
+      onDone: () => {
+        const kind = this.pickEffect('complete');
+        const rect = colRect(dlgCol.id);
+        const at = this.nowIso();
+        if (this.commit((b) => archiveColumn(b, dlgCol.id, at), leave()) && rect !== null) this.playEffect(kind, rect);
+      },
+      onClear: () => {
+        const kind = this.pickEffect('delete');
+        const rect = colRect(dlgCol.id);
+        if (this.commit((b) => clearColumn(b, dlgCol.id), leave()) && rect !== null) this.playEffect(kind, rect);
+      },
+    };
+
     const toggleIn = (list, v) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
     const sourceText = s.sourceDraft !== null ? s.sourceDraft : serializeBoard(board);
     const bodyVars = { ...BASE_VARS, ...theme.vars(settings) };
@@ -4119,6 +4249,7 @@ class Component extends DCLogic {
       ghost,
 
       editorOpen: editor !== null,
+      colDialog,
       editor: editor ?? {},
       drawerStyle: `width: ${s.drawerWidth}px`,
       onDrawerResize: (e) => this.resizeDrawer(e),

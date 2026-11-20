@@ -119,6 +119,10 @@ seconds and milliseconds.
 ` ``` `. Inside it is ordinary markdown (bold, lists, checklists, code), kept apart so its headings and
 lists never clash with the board's. If the text itself contains ` ``` ` lines, use a longer fence.
 
+**Definition of done.** Optional, after the description: a fenced block opened with ` ```dod `, holding
+markdown the same way (usually a checklist). The task panel shows it as a collapsible section with its
+checklist progress.
+
 ## Front matter
 
 Optional `key: value` lines between `---` markers. Only values that differ from the defaults are written.

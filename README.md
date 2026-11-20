@@ -63,7 +63,8 @@ bun run agile    # opens it on localhost
 
 **Note:** A board can be as small as `## Column` headings and `### Task` titles. Everything else is optional: the `# Title`
 (defaults to "Board"), `- id:` (filled in as the next `t-NN`), `- owner:`, `- tags:`, `- history:`, and the description,
-which can be plain text under the task or a ```` ```md ```` fence (use a fence if the text has `#`–`###` headings).
+which can be plain text under the task or a ```` ```md ```` fence (use a fence if the text has `#`–`###` headings). A
+task can also carry a definition of done in a ```` ```dod ```` fence after the description.
 
 
 **Save** (Ctrl/⌘ S) writes the board back to `docs/board/board.md`, with every move recorded in the
@@ -83,6 +84,7 @@ To publish it on GitHub Pages as well, copy `board/index.html` and `.github/work
 - **Copy link** copies a URL with the whole board compressed into it (`#board=…`, deflate + base64url), plus the current view and filters. Opening it shows that board without overwriting the one saved in that browser, and edits to it update the `#board=` in the address bar; it lives in the hash, so it never reaches the server. Links over 2000 characters copy with a warning, since some apps cut them.
 - **Badge and card**: the top of the ☰ menu shows an SVG badge of task counts, like `B: 4 📋 | P: 2 ⏳ | D: 7 ✅`. Click it to choose which columns it shows, each with a symbol (up to 6 characters), an icon and a color (saved in the file as `badge:` in the front matter), and to download or copy the badge and `card.json`. `card.json` is the board as data for a dashboard: title, a status pill (`3 open` or `All done`), done/total, and a count per badge column in the badge's colors; the dialog previews it. In CI, `agile badge` and `agile card` write the same files (see [The `agile` CLI](#the-agile-cli)).
 - **New** starts a blank board (To Do, Doing, Done) in the current style, after asking, since it replaces the board saved in this browser.
+- **Whole column**: click a column's task count to **Mark all done** (archive every task in it) or **Clear** it (delete them all). Undo brings them back.
 - **Child tasks**: the **+** on a card (on hover) or **Create child task** in the task panel adds a task under it, nested as deep as you like. Children sit indented beneath their parent with a connecting line; one moved to another column shows "↳ parent", and leaves a dotted stand-in under the parent that jumps to it. The chevron on a parent folds its children away. Saved as `- parent: t-03`.
 - **History** (the clock beside Undo / Redo): a time slider with a step for every move in the tasks' history, archived ones included. It shows the board, archive and markdown as they stood then, read-only; **Now** returns to the live board. It's replayed from each task's `history:`, so deleted tasks don't appear, columns since renamed come back under their old names, and titles, tags and descriptions are today's.
 - **Undo / Redo** (↶ ↷, or Ctrl/⌘ Z and Ctrl/⌘ Shift Z / Ctrl Y) step back through every change, up to 100. Typing in one field counts as one step; opening a board or starting a new one clears the history.

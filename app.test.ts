@@ -522,3 +522,40 @@ test("Autosave writes a writable ?src board back after edits (not on open), and 
   await Bun.sleep(900);
   expect(puts.length).toBe(1);
 });
+
+test("definition of done: its own ```dod fence, round-trips, edits from the panel", () => {
+  const md = "# B\n\n## Todo\n\n### A\n- id: t-01\n\n```md\nwhat\n```\n\n```dod\n- [ ] tests\n- [x] docs\n```\n\n### B\n- id: t-02\n\nloose text\n```dod\n- [ ] ship\n```\n";
+  const b = parseBoard(md);
+  expect(b.columns[0].tasks.map((t: any) => [t.description, t.dod])).toEqual([["what", "- [ ] tests\n- [x] docs"], ["loose text", "- [ ] ship"]]);
+  expect(serializeBoard(parseBoard(serializeBoard(b)))).toBe(serializeBoard(b));
+  expect(serializeBoard(b)).toContain("```dod\n- [ ] ship\n```");
+  expect(() => parseBoard(md.replace("```md\nwhat\n```", "```dod\nx\n```"))).toThrow("already has a definition of done block");
+  const { make } = load("?task=t-01", { [KEYS.board]: md });
+  const c = make();
+  let e = c.renderVals().editor;
+  expect([e.dodOpen, e.dodSummary]).toEqual([false, "1/2 done"]);
+  e.toggleDod();
+  c.renderVals().editor.dodPreview[0].items[0].toggle();
+  expect(c.renderVals().editor.dodSummary).toBe("2/2 done");
+  c.renderVals().editor.onDod({ target: { value: "" } });
+  expect(c.renderVals().editor.dodSummary).toBe("Not set");
+});
+
+test("the column count opens a dialog to mark the whole column done or clear it", () => {
+  const md = "# B\n\n## Todo\n\n### Keep\n- id: t-01\n\n## Done\n\n### A\n- id: t-02\n\n### B\n- id: t-03\n- parent: t-02\n";
+  const { make } = load("", { [KEYS.board]: md });
+  const c = make();
+  const col = (name: string) => c.renderVals().columns.find((x: any) => x.nameValue === name);
+  expect(c.renderVals().colDialog).toBe(null);
+  col("Done").openActions();
+  expect(c.renderVals().colDialog.title).toBe("Done · 2 tasks");
+  c.renderVals().colDialog.onDone();
+  expect(c.renderVals().colDialog).toBe(null);
+  expect([c.state.board.columns.map((x: any) => x.tasks.length), c.state.board.archive.map((t: any) => t.id)]).toEqual([[1, 0], ["t-02", "t-03"]]);
+  expect(c.state.board.archive[0].history.at(-1).column).toBe("Archive");
+  expect(col("Done").countDisabled).toBe(true);
+  c.undo();
+  col("Done").openActions();
+  c.renderVals().colDialog.onClear();
+  expect([c.state.board.columns.map((x: any) => x.tasks.length), c.state.board.archive.length]).toEqual([[1, 0], 0]);
+});
