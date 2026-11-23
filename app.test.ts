@@ -143,7 +143,7 @@ test("the menu holds New, Open, Save, Download, Copy link and Style; New starts 
   const menu = () => c.renderVals().menuItems.map((m: any) => m.label);
   expect(c.renderVals().menuOpen).toBe(false);
   c.renderVals().toggleMenu();
-  expect(menu()).toEqual(["New", "Open…", "Save", "Download", "Copy link", "Style"]);
+  expect(menu()).toEqual(["New", "Open…", "Save", "Download", "Copy link", "Style", "Flip orientation"]);
   const pick = (label: string) => c.renderVals().menuItems.find((m: any) => m.label === label).pick();
   pick("Style"); expect([c.state.menuOpen, c.state.pickerOpen]).toEqual([false, true]);
   pick("Open…"); expect([c.state.openOpen, c.state.pickerOpen]).toEqual([true, false]);
@@ -543,7 +543,8 @@ test("definition of done: its own ```dod fence, round-trips, edits from the pane
 
 test("the column count opens a dialog to mark the whole column done or clear it", () => {
   const md = "# B\n\n## Todo\n\n### Keep\n- id: t-01\n\n## Done\n\n### A\n- id: t-02\n\n### B\n- id: t-03\n- parent: t-02\n";
-  const { make } = load("", { [KEYS.board]: md });
+  const { make, g } = load("", { [KEYS.board]: md });
+  g.elements = { "data-kb-root": { offsetWidth: 1, getBoundingClientRect: () => ({ left: 0, top: 0, width: 1 }), querySelector: () => null } };
   const c = make();
   const col = (name: string) => c.renderVals().columns.find((x: any) => x.nameValue === name);
   expect(c.renderVals().colDialog).toBe(null);
@@ -553,9 +554,63 @@ test("the column count opens a dialog to mark the whole column done or clear it"
   expect(c.renderVals().colDialog).toBe(null);
   expect([c.state.board.columns.map((x: any) => x.tasks.length), c.state.board.archive.map((t: any) => t.id)]).toEqual([[1, 0], ["t-02", "t-03"]]);
   expect(c.state.board.archive[0].history.at(-1).column).toBe("Archive");
-  expect(col("Done").countDisabled).toBe(true);
+  col("Done").openActions();
+  expect(c.renderVals().colDialog.hasTasks).toBe(false);
+  c.renderVals().colDialog.onAdd();
+  expect(c.renderVals().colDialog).toBe(null);
+  c.undo();
   c.undo();
   col("Done").openActions();
   c.renderVals().colDialog.onClear();
   expect([c.state.board.columns.map((x: any) => x.tasks.length), c.state.board.archive.length]).toEqual([[1, 0], 0]);
+});
+
+test("Add task from the column dialog goes on top; the drawer moves a task to the top or bottom", () => {
+  const md = "# B\n\n## Todo\n\n### A\n- id: t-01\n\n### B\n- id: t-02\n\n### C\n- id: t-03\n";
+  const { make, g } = load("", { [KEYS.board]: md });
+  g.elements = { "data-kb-root": { offsetWidth: 1, getBoundingClientRect: () => ({ left: 0, top: 0, width: 1 }), querySelector: () => null } };
+  const c = make();
+  const ids = () => c.state.board.columns[0].tasks.map((t: any) => t.id);
+  c.renderVals().columns[0].openActions();
+  c.renderVals().colDialog.onAdd();
+  expect(ids()).toEqual(["t-04", "t-01", "t-02", "t-03"]);
+  expect(c.renderVals().editor.topDisabled).toBe(true);
+  c.renderVals().editor.onMoveBottom();
+  expect(ids()).toEqual(["t-01", "t-02", "t-03", "t-04"]);
+  expect(c.renderVals().editor.bottomDisabled).toBe(true);
+  c.renderVals().editor.onMoveTop();
+  expect(ids()).toEqual(["t-04", "t-01", "t-02", "t-03"]);
+  expect(c.state.board.columns[0].tasks[0].history.length).toBe(1); // same column: no history entry
+});
+
+test("moving a task takes its same-column descendants along; ones already in another column stay put", () => {
+  const md = "# B\n\n## Backlog\n\n### A\n- id: t-01\n\n### X\n- id: t-02\n\n### A1\n- id: t-03\n- parent: t-01\n\n### A2\n- id: t-04\n- parent: t-01\n\n### A2a\n- id: t-05\n- parent: t-04\n\n## Next\n\n### N\n- id: t-06\n\n## Doing\n\n### A3\n- id: t-07\n- parent: t-01\n\n### A3a\n- id: t-08\n- parent: t-07\n";
+  const { make } = load("", { [KEYS.board]: md });
+  const c = make();
+  const ids = () => c.state.board.columns.map((col: any) => col.tasks.map((t: any) => t.id));
+  c.commit((b: any) => moveTask(b, "t-01", c.state.board.columns[1].id, null, "2026-11-23T00:00:00Z"));
+  expect(ids()).toEqual([["t-02"], ["t-06", "t-01", "t-03", "t-04", "t-05"], ["t-07", "t-08"]]);
+  expect(c.state.board.columns[1].tasks.at(-1).history.at(-1).column).toBe("Next");
+  // From the drawer: the parent goes to the top with its children; it's then disabled at the top.
+  c.setState({ editingTaskId: "t-01" });
+  c.renderVals().editor.onMoveTop();
+  expect(ids()[1]).toEqual(["t-01", "t-03", "t-04", "t-05", "t-06"]);
+  expect(c.renderVals().editor.topDisabled).toBe(true);
+  c.renderVals().editor.onMoveBottom();
+  expect(ids()[1]).toEqual(["t-06", "t-01", "t-03", "t-04", "t-05"]);
+  expect(c.renderVals().editor.bottomDisabled).toBe(true);
+});
+
+test("Flip orientation (☰ menu) stacks the columns as rows, remembered in this browser", () => {
+  const store: Store = {};
+  const { make } = load("", store);
+  const c = make();
+  const flip = () => c.renderVals().menuItems.find((m: any) => m.label === "Flip orientation");
+  expect(c.renderVals().boardClass).toBe("kb-board");
+  flip().pick();
+  expect(c.renderVals().boardClass).toBe("kb-board kb-rows");
+  expect(flip().hint).toBe("Rows: top to bottom");
+  expect(load("", store).make().renderVals().boardClass).toBe("kb-board kb-rows");
+  flip().pick();
+  expect(c.renderVals().boardClass).toBe("kb-board");
 });

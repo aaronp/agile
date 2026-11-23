@@ -138,6 +138,13 @@ button.kb-col-count:disabled{cursor:default}
 .kb-rail-end{bottom:auto;height:calc(var(--gap) + 18px)}
 .kb-rail-tee::after,.kb-rail-end::after{content:"";position:absolute;top:calc(var(--gap) + 16px);left:0;width:7px;border-top:2px solid var(--line)}
 .kb-card-ph{border:1.5px dashed var(--accent);border-radius:var(--radius);opacity:.6;background:var(--placeholder)}
+/* Rows: each column is a full-width row, its cards wrap left to right. Children follow their parent without indent rails. */
+.kb-rows{flex-direction:column;align-items:stretch}
+.kb-rows .kb-col,.kb-rows .kb-col-ph{width:auto}
+.kb-rows .kb-cards{flex-direction:row;flex-wrap:wrap;align-items:flex-start}
+.kb-rows .kb-card,.kb-rows .kb-card-away,.kb-rows .kb-card-ph{flex:none;width:var(--col-w);margin-left:0!important}
+.kb-rows .kb-rail{display:none}
+.kb-rows .kb-add,.kb-rows .kb-add-col{align-self:flex-start}
 .kb-col-ph{flex:none;width:var(--col-w);border:1.5px dashed var(--accent);border-radius:var(--radius);background:var(--placeholder);opacity:.6}
 .kb-add{display:flex;align-items:center;gap:6px;height:34px;padding:0 8px;border:1px dashed var(--line);border-radius:var(--radius);background:transparent;color:var(--col-head-fg);cursor:pointer;opacity:.8}
 .kb-add:hover{opacity:1;border-color:var(--accent)}
@@ -382,7 +389,7 @@ a.kb-menu-item{color:inherit;text-decoration:none}
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.6"></circle><circle cx="15" cy="6" r="1.6"></circle><circle cx="9" cy="12" r="1.6"></circle><circle cx="15" cy="12" r="1.6"></circle><circle cx="9" cy="18" r="1.6"></circle><circle cx="15" cy="18" r="1.6"></circle></svg>
                 </button>
                 <input class="kb-col-name" data-kb-col="{{col.nameRef}}" aria-label="Column name" value="{{col.nameValue}}" onChange="{{col.onName}}" onBlur="{{col.onNameBlur}}">
-                <button class="kb-col-count" aria-label="{{col.countActionLabel}}" title="{{col.countTitle}}" aria-haspopup="dialog" disabled="{{col.countDisabled}}" onClick="{{col.openActions}}">{{col.countLabel}}</button>
+                <button class="kb-col-count" aria-label="{{col.countActionLabel}}" title="{{col.countTitle}}" aria-haspopup="dialog" onClick="{{col.openActions}}">{{col.countLabel}}</button>
                 <button class="kb-icon" aria-label="{{col.deleteLabel}}" title="{{col.deleteTitle}}" disabled="{{col.deleteDisabled}}" onClick="{{col.onDelete}}">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
                 </button>
@@ -669,6 +676,8 @@ a.kb-menu-item{color:inherit;text-decoration:none}
         <button class="kb-primary" onClick="{{closeEditor}}">Ok</button>
         <button class="kb-btn" disabled="{{editor.completeDisabled}}" title="{{editor.addChildTitle}}" onClick="{{editor.onAddChild}}">Create child task</button>
         <button class="kb-btn" onClick="{{editor.openCompleteDialog}}">Complete…</button>
+        <button class="kb-btn" disabled="{{editor.topDisabled}}" onClick="{{editor.onMoveTop}}">Move to top</button>
+        <button class="kb-btn" disabled="{{editor.bottomDisabled}}" onClick="{{editor.onMoveBottom}}">Move to bottom</button>
       </div>
     </aside>
   </sc-if>
@@ -700,13 +709,19 @@ a.kb-menu-item{color:inherit;text-decoration:none}
           <h2 id="kb-coldlg-h">{{colDialog.title}}</h2>
           <button class="kb-icon" aria-label="Close" onClick="{{colDialog.close}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
         </div>
-        <p class="kb-muted kb-small">Mark all done moves every task in this column to the archive (see the Archive view). Clear deletes them all. Undo brings them back.</p>
+        <p class="kb-muted kb-small">Add task puts a new task at the top of this column.<sc-if value="{{colDialog.hasTasks}}" hint-placeholder-val="{{ true }}"> Mark all done moves every task in it to the archive (see the Archive view). Clear deletes them all. Undo brings them back.</sc-if></p>
         <div class="kb-actions">
-          <button class="kb-primary" data-kb-coldone="{{uid}}" onClick="{{colDialog.onDone}}">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5L20 7"></path></svg>
-            <span>Mark all done</span>
+          <button class="kb-btn" data-kb-coladd="{{uid}}" onClick="{{colDialog.onAdd}}">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+            <span>Add task</span>
           </button>
-          <button class="kb-danger" onClick="{{colDialog.onClear}}">Clear</button>
+          <sc-if value="{{colDialog.hasTasks}}" hint-placeholder-val="{{ true }}">
+            <button class="kb-primary" onClick="{{colDialog.onDone}}">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5L20 7"></path></svg>
+              <span>Mark all done</span>
+            </button>
+            <button class="kb-danger" onClick="{{colDialog.onClear}}">Clear</button>
+          </sc-if>
           <button class="kb-btn" onClick="{{colDialog.close}}">Cancel</button>
         </div>
       </div>
@@ -1354,11 +1369,11 @@ const placeOf = (found) => ({ column: found.col === null ? 'Archive' : found.col
 
 function setBoardTitle(board, title) { return validateBoard({ ...board, title }); }
 
-function addTask(board, colId, title, at, parent = '') {
+function addTask(board, colId, title, at, parent = '', top = false) {
   const col = findColumn(board, colId);
   const id = nextTaskId(board);
   const task = { id, title, description: '', dod: '', owner: '', tags: [], history: [{ column: col.name, at, owner: '' }], parent };
-  return { board: withColumns(board, board.columns.map((c) => (c.id === colId ? { ...c, tasks: [...c.tasks, task] } : c))), id };
+  return { board: withColumns(board, board.columns.map((c) => (c.id === colId ? { ...c, tasks: top ? [task, ...c.tasks] : [...c.tasks, task] } : c))), id };
 }
 
 /** Owner goes through reassignTask so each handover is recorded; the other fields are plain edits. */
@@ -1384,19 +1399,35 @@ function deleteTask(board, taskId) {
   return withColumns({ ...board, archive: keep(board.archive) }, board.columns.map((c) => ({ ...c, tasks: keep(c.tasks) })));
 }
 
-/** Move a task before `beforeId` in `toColId` (null = append). Crossing columns appends a history entry at `at`. */
+/** Ids of a task and its descendants in the same column; a descendant moved to another column (and its own subtree) is left out. */
+function familyInColumn(col, taskId) {
+  const ids = new Set([taskId]);
+  // ponytail: repeats the scan until nothing new joins, O(n²) per column; fine at kanban sizes
+  for (let grew = true; grew;) {
+    grew = false;
+    for (const t of col.tasks) if (!ids.has(t.id) && ids.has(t.parent)) { ids.add(t.id); grew = true; }
+  }
+  return ids;
+}
+
+/**
+ * Move a task, with its descendants in the same column, before `beforeId` in `toColId` (null = append).
+ * The task goes first, then the descendants in their current order. Crossing columns appends a history entry at `at` to each.
+ */
 function moveTask(board, taskId, toColId, beforeId, at) {
-  if (beforeId === taskId) bug('a task cannot be placed before itself');
   const { col: from, task } = findTask(board, taskId);
   if (from === null) bug('moveTask on an archived task; use restoreTask');
+  const ids = familyInColumn(from, taskId);
+  if (ids.has(beforeId)) bug('a task cannot be placed before itself or its own child');
   const to = findColumn(board, toColId);
-  const moved = from.id === to.id ? task : { ...task, history: [...task.history, { column: to.name, at, owner: task.owner }] };
+  const cross = (t) => (from.id === to.id ? t : { ...t, history: [...t.history, { column: to.name, at, owner: t.owner }] });
+  const moved = [task, ...from.tasks.filter((t) => t.id !== taskId && ids.has(t.id))].map(cross);
   return withColumns(board, board.columns.map((c) => {
-    const rest = c.tasks.filter((t) => t.id !== taskId);
+    const rest = c.tasks.filter((t) => !ids.has(t.id));
     if (c.id !== to.id) return rest.length === c.tasks.length ? c : { ...c, tasks: rest };
     const idx = beforeId === null ? rest.length : rest.findIndex((t) => t.id === beforeId);
     if (idx < 0) fail(`No task "${beforeId}" in column "${to.name}"`);
-    return { ...c, tasks: [...rest.slice(0, idx), moved, ...rest.slice(idx)] };
+    return { ...c, tasks: [...rest.slice(0, idx), ...moved, ...rest.slice(idx)] };
   }));
 }
 
@@ -3029,6 +3060,7 @@ const STORAGE_RECENTS = 'kb-recents:v1';
 const STORAGE_AUTOSAVE = 'kb-autosave:v1'; // '0' when Autosave is off
 const AUTOSAVE_MS = 800;
 const STORAGE_DRAWER_WIDTH = 'kb-drawer-width:v1';
+const STORAGE_ROWS = 'kb-rows:v1'; // '1' when columns are laid out as rows, top to bottom
 const DRAWER_MIN_WIDTH = 320;
 const MAX_RECENTS = 8;
 const MAX_UNDO = 100;
@@ -3104,6 +3136,7 @@ class Component extends DCLogic {
       completeDialogFor: null,
       colDialogFor: null, // the column whose "mark all done / clear" dialog is open
       drawerWidth: Component.loadDrawerWidth(),
+      rows: (() => { try { return window.localStorage.getItem(STORAGE_ROWS) === '1'; } catch (err) { return false; } })(), // blocked storage: columns
       collapsed: [], // ids of tasks whose children are folded away (this session only)
       past: [], future: [], // undo/redo: earlier and undone boards, nearest last / first
       recents: Component.loadRecents(),
@@ -3145,6 +3178,12 @@ class Component extends DCLogic {
   }
   static loadDrawerWidth() {
     try { const w = Number(window.localStorage.getItem(STORAGE_DRAWER_WIDTH)); return w >= DRAWER_MIN_WIDTH ? w : 400; } catch (err) { return 400; } // blocked storage: default width
+  }
+  /** Columns side by side, or stacked as rows; remembered in this browser. */
+  toggleRows() {
+    const rows = !this.state.rows;
+    try { window.localStorage.setItem(STORAGE_ROWS, rows ? '1' : '0'); } catch (err) { /* blocked storage: lasts this session */ }
+    this.setState({ rows });
   }
   /** Drag the drawer's left edge; the width is remembered in this browser. */
   resizeDrawer(e) {
@@ -3746,23 +3785,28 @@ class Component extends DCLogic {
     const y = (e.clientY - geo.top) / geo.scale;
     const active = d.active || Math.hypot(x - d.startX, y - d.startY) > 5;
     if (!active) return;
-    const target = d.kind === 'task' ? this.taskTarget(geo, x, y) : this.columnTarget(geo, x);
+    const target = d.kind === 'task' ? this.taskTarget(geo, x, y) : this.columnTarget(geo, x, y);
     this.setState({ drag: { ...d, x, y, active, target } });
   }
   taskTarget(geo, x, y) {
     const cols = Array.from(geo.root.querySelectorAll('[data-col-drop]')).map((el) => ({ id: el.getAttribute('data-col-drop'), el, r: geo.local(el.getBoundingClientRect()) }));
     if (cols.length === 0) return null;
+    // Nearest column across the board's flow: by x side by side, by y as rows.
+    const [p, pos, size] = this.state.rows ? [y, 'y', 'h'] : [x, 'x', 'w'];
     const best = cols.reduce((a, c) => {
-      const dist = x < c.r.x ? c.r.x - x : x > c.r.x + c.r.w ? x - (c.r.x + c.r.w) : 0;
+      const dist = p < c.r[pos] ? c.r[pos] - p : p > c.r[pos] + c.r[size] ? p - (c.r[pos] + c.r[size]) : 0;
       return dist < a.dist ? { c, dist } : a;
     }, { c: null, dist: Infinity }).c;
     const cards = Array.from(best.el.querySelectorAll('[data-card-slot]')).map((el) => ({ id: el.getAttribute('data-card-slot'), r: geo.local(el.getBoundingClientRect()) }));
-    const before = cards.find((c) => y < c.r.y + c.r.h / 2);
+    // As rows, cards wrap in reading order: before any card on a lower line, or left of the middle of one on this line.
+    const before = this.state.rows
+      ? cards.find((c) => y < c.r.y || (y < c.r.y + c.r.h && x < c.r.x + c.r.w / 2))
+      : cards.find((c) => y < c.r.y + c.r.h / 2);
     return { colId: best.id, beforeId: before === undefined ? null : before.id };
   }
-  columnTarget(geo, x) {
+  columnTarget(geo, x, y) {
     const cols = Array.from(geo.root.querySelectorAll('[data-col-drop]')).map((el) => ({ id: el.getAttribute('data-col-drop'), r: geo.local(el.getBoundingClientRect()) }));
-    const before = cols.find((c) => x < c.r.x + c.r.w / 2);
+    const before = cols.find((c) => (this.state.rows ? y < c.r.y + c.r.h / 2 : x < c.r.x + c.r.w / 2));
     return { beforeId: before === undefined ? null : before.id };
   }
   handlePointerUp(e) {
@@ -3789,12 +3833,12 @@ class Component extends DCLogic {
     window.setTimeout(() => { if (this.state.fresh !== null && this.state.fresh.id === id) this.setState({ fresh: null }); }, 1200);
   }
 
-  /** New task (a child when `parent` is set) in `colId`, then open it with its title selected. */
-  createTask(colId, parent) {
+  /** New task (a child when `parent` is set) in `colId` (at the top when `top`), then open it with its title selected. */
+  createTask(colId, parent, top = false) {
     const at = this.nowIso();
     const kind = this.pickEffect('create');
     let created = null;
-    const ok = this.commit((b) => { created = addTask(b, colId, parent === '' ? 'New task' : 'New child task', at, parent); return created.board; });
+    const ok = this.commit((b) => { created = addTask(b, colId, parent === '' ? 'New task' : 'New child task', at, parent, top); return created.board; });
     if (!ok) return;
     const id = created.id;
     this.setState({ editingTaskId: id, descTab: 'preview', dodTab: 'write', drafts: {}, fieldErrors: {}, tagInput: '', pickerOpen: false, historyOpen: false, dodOpen: false, fresh: kind === null ? null : { id, cls: ENTRY_CLASS[kind] } }, () => {
@@ -3843,14 +3887,16 @@ class Component extends DCLogic {
     // Every task above the open one, so its whole chain of parents lights up.
     const ancestors = new Set();
     for (let p = everyTask.find((t) => t.id === s.editingTaskId)?.parent ?? ''; p !== ''; p = everyTask.find((t) => t.id === p).parent) ancestors.add(p);
+    // A dragged task takes its same-column children along, so none of them is shown (or a drop target) mid-drag.
+    const dragFamily = drag !== null && drag.kind === 'task' ? (({ col }) => (col === null ? new Set([drag.id]) : familyInColumn(col, drag.id)))(findTask(board, drag.id)) : new Set();
     const columnViews = board.columns.flatMap((col) => {
       if (drag !== null && drag.kind === 'column' && drag.id === col.id) return [];
       const visible = col.tasks.filter((t) => taskMatches(t, filter));
-      const shown = visible.filter((t) => !(drag !== null && drag.kind === 'task' && drag.id === t.id));
+      const shown = visible.filter((t) => !dragFamily.has(t.id));
       // Each task, then its children: the ones in this column, then dotted stand-ins for ones moved to another column.
       const here = new Set(shown.map((t) => t.id));
       const elsewhere = board.columns.filter((c) => c.id !== col.id).flatMap((c) => c.tasks.map((t) => ({ t, colName: c.name })))
-        .filter(({ t }) => !(drag !== null && drag.kind === 'task' && drag.id === t.id) && taskMatches(t, filter));
+        .filter(({ t }) => !dragFamily.has(t.id) && taskMatches(t, filter));
       const rows = [];
       const walk = (t, depth) => {
         const kids = shown.filter((k) => k.parent === t.id);
@@ -3915,10 +3961,9 @@ class Component extends DCLogic {
         nameRef: `${this.uid}.${col.id}`,
         nameError: s.fieldErrors[nameKey] ?? null,
         countLabel: hidden > 0 ? `${visible.length}/${col.tasks.length}` : String(col.tasks.length),
-        countDisabled: col.tasks.length === 0,
-        countActionLabel: `${col.tasks.length} tasks in ${col.name}: mark all done or clear`,
-        countTitle: col.tasks.length === 0 ? 'No tasks' : 'Mark all done or clear…',
-        openActions: () => this.setState({ colDialogFor: col.id }, () => window.requestAnimationFrame(() => document.querySelector(`[data-kb-coldone="${this.uid}"]`)?.focus())),
+        countActionLabel: `${col.tasks.length} tasks in ${col.name}: add a task, mark all done or clear`,
+        countTitle: col.tasks.length === 0 ? 'Add task…' : 'Add task, mark all done or clear…',
+        openActions: () => this.setState({ colDialogFor: col.id }, () => window.requestAnimationFrame(() => document.querySelector(`[data-kb-coladd="${this.uid}"]`)?.focus())),
         gripLabel: `Drag column ${col.name}`,
         deleteLabel: `Delete column ${col.name}`,
         deleteDisabled: col.tasks.length > 0,
@@ -3953,6 +3998,7 @@ class Component extends DCLogic {
     let editor = null;
     if (editingTask !== null) {
       const { t, c } = editingTask;
+      const fam = c === null ? new Set() : familyInColumn(c, t.id); // moves with it
       const summary = historySummary(t, s.now);
       const k = (f) => `task.${t.id}.${f}`;
       const field = (f) => (k(f) in s.drafts ? s.drafts[k(f)] : t[f]);
@@ -4062,6 +4108,11 @@ class Component extends DCLogic {
         completeDisabled: c === null,
         addChildTitle: c === null ? 'Restore it first' : 'A new task under this one, in the same column',
         onAddChild: () => { if (c !== null) this.createTask(c.id, t.id); },
+        // Archived tasks have no stack to move in; a task already at that end has nowhere to go.
+        topDisabled: c === null || fam.has(c.tasks[0].id),
+        bottomDisabled: c === null || fam.has(c.tasks.at(-1).id),
+        onMoveTop: () => { if (c !== null && !fam.has(c.tasks[0].id)) this.commit((b) => moveTask(b, t.id, c.id, c.tasks[0].id, this.nowIso())); },
+        onMoveBottom: () => { if (c !== null && !fam.has(c.tasks.at(-1).id)) this.commit((b) => moveTask(b, t.id, c.id, null, this.nowIso())); },
         completeLabel: c === null ? 'Archived' : 'Mark complete',
         completeTitle: c === null ? 'Already in the archive' : 'Moves it to the archive (see the Archive view)',
         historyOpen: s.historyOpen,
@@ -4118,7 +4169,7 @@ class Component extends DCLogic {
       };
     });
 
-    const dlgCol = board.columns.find((c) => c.id === s.colDialogFor && c.tasks.length > 0); // gone (undo, emptied) = closed
+    const dlgCol = board.columns.find((c) => c.id === s.colDialogFor); // gone (undo, deleted) = closed
     const closeCol = () => this.setState({ colDialogFor: null });
     // Celebrate over the column itself; its cards are about to leave.
     const colRect = (id) => { const el = document.querySelector(`[data-col-drop="${id}"]`); return el === null ? null : this.elRect(el); };
@@ -4128,6 +4179,8 @@ class Component extends DCLogic {
       close: closeCol,
       backdrop: (e) => { if (e.target === e.currentTarget) closeCol(); },
       onKey: (e) => { if (e.key === 'Escape') { e.stopPropagation(); closeCol(); } },
+      hasTasks: dlgCol.tasks.length > 0,
+      onAdd: () => this.setState({ colDialogFor: null }, () => this.createTask(dlgCol.id, '', true)),
       onDone: () => {
         const kind = this.pickEffect('complete');
         const rect = colRect(dlgCol.id);
@@ -4153,7 +4206,7 @@ class Component extends DCLogic {
       rootClass: (drag !== null ? 'kb kb-dragging' : 'kb') + (s.timeAt !== null ? ' kb-past' : ''),
       canvasClass: theme.effect === null ? 'kb-fx kb-fx-off' : 'kb-fx',
       mainClass: `kb-main kb-mode-${s.mode}`,
-      boardClass: s.parseError !== null ? 'kb-board kb-locked' : 'kb-board',
+      boardClass: ['kb-board', ...(s.rows ? ['kb-rows'] : []), ...(s.parseError !== null ? ['kb-locked'] : [])].join(' '),
       ownerListId: `${this.uid}-owners`,
       tagListId: `${this.uid}-tags`,
 
@@ -4340,6 +4393,7 @@ class Component extends DCLogic {
         { label: 'Download', hint: this.fileName(), run: () => this.notify(`Downloaded ${this.download()}`) },
         { label: 'Copy link', hint: 'Board in the URL', run: () => this.copyLink() },
         { label: 'Style', hint: theme.name, run: () => this.setState({ pickerOpen: true }) },
+        { label: 'Flip orientation', hint: s.rows ? 'Rows: top to bottom' : 'Columns: left to right', run: () => this.toggleRows() },
       ].map((m) => ({ label: m.label, hint: m.hint, pick: () => { this.setState({ menuOpen: false }); m.run(); } })),
       fromSrc: this.src !== null,
       srcName: this.src === null ? '' : this.src.split('/').pop(),
