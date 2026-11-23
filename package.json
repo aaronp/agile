@@ -1,6 +1,6 @@
 {
   "name": "@pritzlaff/agile",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "A kanban board driven by one markdown file, in one HTML page.",
   "repository": {
     "type": "git",
